@@ -1,0 +1,18 @@
+[Unit]
+Description=beacon VPN panel
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+ExecStart=/usr/local/bin/beacon serve
+Restart=always
+RestartSec=3
+User=root
+# позволяет панели биндить привилегированные порты, если понадобится
+AmbientCapabilities=CAP_NET_BIND_SERVICE
+# каталог с конфигом и данными
+Environment=BEACON_DIR=/etc/beacon
+
+[Install]
+WantedBy=multi-user.target
