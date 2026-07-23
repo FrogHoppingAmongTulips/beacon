@@ -120,16 +120,21 @@ func (s *Store) Delete(id string) error {
 	return s.persistLocked()
 }
 
-// Touch обновляет статистику/last_seen (вызывается синхронизацией с Xray).
-func (s *Store) Touch(id string, up, down uint64, seen time.Time) {
+// AddTraffic добавляет дельту трафика пользователю и помечает его активным (last_seen).
+// Вызывается поллером статистики Xray; изменения сразу пишутся на диск.
+func (s *Store) AddTraffic(id string, dUp, dDown uint64, seen time.Time) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	if u, ok := s.users[id]; ok {
-		u.BytesUp, u.BytesDown = up, down
-		if seen.After(u.LastSeen) {
-			u.LastSeen = seen
-		}
+	u, ok := s.users[id]
+	if !ok {
+		return
 	}
+	u.BytesUp += dUp
+	u.BytesDown += dDown
+	if seen.After(u.LastSeen) {
+		u.LastSeen = seen
+	}
+	_ = s.persistLocked()
 }
 
 func (s *Store) persistLocked() error {

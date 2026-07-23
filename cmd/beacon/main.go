@@ -21,6 +21,7 @@ import (
 	"os/signal"
 	"strings"
 	"syscall"
+	"time"
 
 	"beacon/internal/config"
 	"beacon/internal/qr"
@@ -98,6 +99,9 @@ func serve() {
 	srv := server.New(cfg, paths, st, xr)
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
+
+	// фоновый опрос статистики трафика Xray (online-статус + байты по каждому)
+	go xray.NewStatsPoller(xr).Run(ctx, st, 5*time.Second)
 
 	if err := srv.Run(ctx); err != nil {
 		log.Fatal(err)
