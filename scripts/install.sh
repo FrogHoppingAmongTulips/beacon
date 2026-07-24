@@ -51,12 +51,16 @@ install_xray() {
 }
 
 install_beacon() {
-  local arch; arch="$(detect_arch)"
+  local arch tmp; arch="$(detect_arch)"; tmp="${BIN}.new"
   log "скачиваю beacon ($arch)…"
-  if ! curl -fsSL "$BASE_URL/beacon-linux-$arch" -o "$BIN"; then
+  # качаем во временный файл и делаем atomic rename — запись прямо в $BIN
+  # падает с ETXTBSY, если сервис beacon уже запущен и держит бинарник открытым
+  if ! curl -fsSL "$BASE_URL/beacon-linux-$arch" -o "$tmp"; then
+    rm -f "$tmp"
     die "не удалось скачать бинарник beacon. Проверь BASE_URL или собери из исходников: go build -o $BIN ./cmd/beacon"
   fi
-  chmod +x "$BIN"
+  chmod +x "$tmp"
+  mv -f "$tmp" "$BIN"
 }
 
 public_ip() {
