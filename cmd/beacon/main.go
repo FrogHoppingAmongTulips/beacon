@@ -55,6 +55,8 @@ func main() {
 		setEnabled(os.Args[2:], false)
 	case "rename":
 		renameUser(os.Args[2:])
+	case "https":
+		setupHTTPS(os.Args[2:])
 	case "reset-password":
 		resetPassword(os.Args[2:])
 	case "version", "-v", "--version":
@@ -82,6 +84,7 @@ func usage() {
   beacon enable <id>     включить ключ
   beacon disable <id>    выключить ключ (без удаления)
   beacon rename <id> ..  переименовать ключ
+  beacon https [домен]   HTTPS панели через Let's Encrypt (авто <ip>.sslip.io)
   beacon reset-password  сменить пароль панели
   beacon version         версия сборки
 
@@ -226,6 +229,35 @@ func resetPassword(args []string) {
 	fmt.Printf("Новый пароль панели: %s\n", pw)
 }
 
+// setupHTTPS включает Let's Encrypt для домена (по умолчанию авто <ip>.sslip.io).
+func setupHTTPS(args []string) {
+	paths := config.DefaultPaths()
+	cfg, err := config.Load(paths.ConfigFile)
+	fatal(err)
+
+	domain := ""
+	if len(args) > 0 {
+		domain = args[0]
+	} else if isIPv4(cfg.PublicHost) {
+		domain = strings.ReplaceAll(cfg.PublicHost, ".", "-") + ".sslip.io"
+	}
+	if domain == "" {
+		log.Fatal("укажи домен: beacon https <домен>")
+	}
+	cfg.SetPath(paths.ConfigFile)
+	cfg.ACMEDomain = domain
+	fatal(cfg.Save())
+
+	fmt.Printf("HTTPS включён: https://%s%s\n", domain, cfg.ListenAddr)
+	fmt.Println("Нужен свободный порт 80 и открытые 80/443 в фаерволе.")
+	fmt.Println("Перезапусти: systemctl restart beacon")
+}
+
+func isIPv4(s string) bool {
+	ip := net.ParseIP(s)
+	return ip != nil && ip.To4() != nil
+}
+
 func setEnabled(args []string, on bool) {
 	if len(args) == 0 {
 		log.Fatal("укажи id: beacon enable|disable <id>")
@@ -296,6 +328,9 @@ func printSummary(cfg *config.Config, pw, link string) {
 // panelURL собирает URL панели из публичного хоста и адреса прослушивания.
 func panelURL(cfg *config.Config) string {
 	host := cfg.PublicHost
+	if cfg.ACMEDomain != "" {
+		host = cfg.ACMEDomain
+	}
 	addr := cfg.ListenAddr
 	port := strings.TrimPrefix(addr, ":")
 	if h, p, err := net.SplitHostPort(addr); err == nil {

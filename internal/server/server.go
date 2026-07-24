@@ -10,6 +10,8 @@ import (
 	"sync"
 	"time"
 
+	"golang.org/x/crypto/acme/autocert"
+
 	"beacon/internal/config"
 	"beacon/internal/metrics"
 	"beacon/internal/store"
@@ -76,25 +78,37 @@ func (s *Server) routes() http.Handler {
 
 // Run запускает HTTPS-сервер до отмены ctx.
 func (s *Server) Run(ctx context.Context) error {
-	cert, err := ensureCert(s.paths)
-	if err != nil {
-		return err
-	}
-
 	go s.sampleLoop(ctx)
 
 	srv := &http.Server{
 		Addr:              s.cfg.ListenAddr,
 		Handler:           s.routes(),
-		TLSConfig:         &tls.Config{Certificates: []tls.Certificate{cert}, MinVersion: tls.VersionTLS12},
 		ReadHeaderTimeout: 10 * time.Second,
 	}
+
+	if s.cfg.ACMEDomain != "" {
+		// валидный сертификат Let's Encrypt для домена (напр. <ip>.sslip.io)
+		m := &autocert.Manager{
+			Prompt:     autocert.AcceptTOS,
+			HostPolicy: autocert.HostWhitelist(s.cfg.ACMEDomain),
+			Cache:      autocert.DirCache(s.paths.ACMEDir),
+		}
+		srv.TLSConfig = m.TLSConfig()
+		go func() { _ = http.ListenAndServe(":80", m.HTTPHandler(nil)) }() // HTTP-01 challenge на :80
+		log.Printf("панель beacon (Let's Encrypt): https://%s%s", s.cfg.ACMEDomain, s.cfg.ListenAddr)
+	} else {
+		cert, err := ensureCert(s.paths)
+		if err != nil {
+			return err
+		}
+		srv.TLSConfig = &tls.Config{Certificates: []tls.Certificate{cert}, MinVersion: tls.VersionTLS12}
+		log.Printf("панель beacon: https://<адрес-сервера>%s", s.cfg.ListenAddr)
+	}
+
 	go func() {
 		<-ctx.Done()
 		_ = srv.Close()
 	}()
-
-	log.Printf("панель beacon: https://<адрес-сервера>%s", s.cfg.ListenAddr)
 	if err := srv.ListenAndServeTLS("", ""); err != nil && err != http.ErrServerClosed {
 		return err
 	}

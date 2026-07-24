@@ -12,6 +12,10 @@ import (
 // handleInfo отдаёт метаданные сервера и протокола для разделов панели (без секретов вроде приватного ключа).
 func (s *Server) handleInfo(w http.ResponseWriter, r *http.Request) {
 	m := s.getLatest()
+	tlsKind := "self-signed"
+	if s.cfg.ACMEDomain != "" {
+		tlsKind = "lets-encrypt"
+	}
 	writeJSON(w, http.StatusOK, map[string]any{
 		"version":     s.version,
 		"host":        s.cfg.PublicHost,
@@ -22,8 +26,9 @@ func (s *Server) handleInfo(w http.ResponseWriter, r *http.Request) {
 		"fingerprint": s.cfg.Fingerprint,
 		"public_key":  s.cfg.PublicKey,
 		"short_ids":   s.cfg.ShortIDs,
+		"acme_domain": s.cfg.ACMEDomain,
 		"uptime_sec":  m.UptimeSec,
-		"tls":         "self-signed",
+		"tls":         tlsKind,
 	})
 }
 

@@ -20,6 +20,7 @@ type Paths struct {
 	CertFile   string // самоподписанный TLS-сертификат панели
 	KeyFile    string // приватный ключ панели
 	XrayConfig string // config.json для Xray-core
+	ACMEDir    string // кеш сертификатов Let's Encrypt
 }
 
 // DefaultPaths возвращает пути с учётом переменных окружения (удобно для dev).
@@ -32,6 +33,7 @@ func DefaultPaths() Paths {
 		CertFile:   filepath.Join(base, "panel-cert.pem"),
 		KeyFile:    filepath.Join(base, "panel-key.pem"),
 		XrayConfig: envOr("BEACON_XRAY_CONFIG", "/usr/local/etc/xray/config.json"),
+		ACMEDir:    filepath.Join(base, "acme"),
 	}
 }
 
@@ -51,6 +53,9 @@ type Config struct {
 	SNI         string   `json:"sni"`         // маскировочный домен
 	Dest        string   `json:"dest"`        // reality dest, host:port
 	Fingerprint string   `json:"fingerprint"` // utls fingerprint, напр. chrome
+
+	// HTTPS панели через Let's Encrypt. Пусто = самоподписанный сертификат.
+	ACMEDomain string `json:"acme_domain"`
 
 	mu   sync.Mutex
 	path string
