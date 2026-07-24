@@ -26,8 +26,6 @@
   .top .sp{flex:1}
   .top .stat{display:flex;align-items:center;gap:9px;font-size:11px;color:var(--mut);letter-spacing:.14em;}
   .dot{width:7px;height:7px;border-radius:50%;background:#fff;box-shadow:0 0 0 0 rgba(255,255,255,.5);animation:pl 2.6s infinite;}
-  .stat.down .dot{background:var(--faint);animation:none;box-shadow:none}
-  .stat.down #topWork{color:var(--faint)}
   @keyframes pl{0%{box-shadow:0 0 0 0 rgba(255,255,255,.35)}100%{box-shadow:0 0 0 7px rgba(255,255,255,0)}}
   .back{display:none;align-items:center;gap:8px;background:none;border:none;color:var(--mut);cursor:pointer;font-size:11px;letter-spacing:.14em;padding:4px;}
   .back:hover{color:#fff}
@@ -133,9 +131,8 @@
   <div class="top">
     <button class="back" id="back"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6l-6 6 6 6"/></svg>НАЗАД</button>
     <div class="word">AQU</div>
-    <div class="stat" style="margin-left:26px"><span class="mono" id="topSys">CPU —% · RAM — ГБ</span></div>
     <div class="sp"></div>
-    <div class="stat" id="topStat"><span class="dot"></span><span id="topWork">WORK</span></div>
+    <div class="stat" id="topStat"><span class="dot"></span><span id="topHost">В СЕТИ</span></div>
   </div>
 
   <div id="home"><div class="grid" id="grid"></div></div>
@@ -546,27 +543,11 @@
       set('#r-cl',onlineN()+' / '+state.users.length);
     }
     if(current==='speed'){drawBW();set('#bw-dn',fmtMbps(M.dn));set('#bw-up',fmtMbps(M.up));}
-    setTopStat();
   }
-  function connectMetrics(){
-    try{
-      state.metricsES=new EventSource('/api/stream');
-      state.metricsES.onmessage=e=>{try{applyMetrics(JSON.parse(e.data));setWork(true)}catch(_){}};
-      state.metricsES.onerror=()=>setWork(false);
-    }catch(_){ setWork(false); }
-  }
+  function connectMetrics(){try{state.metricsES=new EventSource('/api/stream');state.metricsES.onmessage=e=>{try{applyMetrics(JSON.parse(e.data))}catch(_){}};}catch(_){}}
 
   /* ---------- boot ---------- */
-  function setWork(ok){
-    const st=$('#topStat'),lbl=$('#topWork'); if(!st||!lbl)return;
-    lbl.textContent=ok?'WORK':'NO WORK';
-    st.classList.toggle('down',!ok);
-  }
-  function setTop(){setWork(true);setTopStat();}
-  function setTopStat(){
-    const el=$('#topSys'); if(!el)return;
-    el.innerHTML='CPU '+Math.round(M.cpu)+'% · RAM '+(M.ramT?M.ram.toFixed(1):'0')+'<small>/'+(M.ramT||0).toFixed(1)+' ГБ</small>';
-  }
+  function setTop(){const h=maskHost(INFO.host||location.hostname||'').toUpperCase();$('#topHost').textContent=h&&h!=='—'?('В СЕТИ · '+h):'В СЕТИ';}
   async function startApp(){
     $('#loginOv').classList.remove('open');
     if(state.demo){INFO={version:'demo',host:'demo-host',vpn_port:443,listen:':8443',sni:'www.microsoft.com',dest:'www.microsoft.com:443',fingerprint:'chrome',public_key:'12R6C36yvy7w_jO6dZHnRx',short_ids:['268abbed4aed34fc'],tls:'self-signed'};state.users=demoUsers();startDemo();setTop();return;}
