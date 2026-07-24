@@ -89,6 +89,33 @@ func (s *Server) handleDeleteUser(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, map[string]bool{"ok": true})
 }
 
+// handleUpdateUser частично меняет ключ: имя, заметку и/или вкл-выкл.
+func (s *Server) handleUpdateUser(w http.ResponseWriter, r *http.Request) {
+	var req struct {
+		Name    *string `json:"name"`
+		Device  *string `json:"device"`
+		Enabled *bool   `json:"enabled"`
+	}
+	_ = json.NewDecoder(r.Body).Decode(&req)
+
+	u, enabledChanged, err := s.store.Update(r.PathValue("id"), req.Name, req.Device, req.Enabled)
+	if err != nil {
+		if errors.Is(err, store.ErrNotFound) {
+			writeJSON(w, http.StatusNotFound, map[string]string{"error": "пользователь не найден"})
+			return
+		}
+		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": err.Error()})
+		return
+	}
+	// вкл/выкл меняет список клиентов Xray — перезапускаем; переименование reload не требует
+	if enabledChanged {
+		if err := s.xray.Apply(); err != nil {
+			log.Printf("xray apply после изменения %s: %v", u.ID, err)
+		}
+	}
+	writeJSON(w, http.StatusOK, s.dto(u))
+}
+
 func (s *Server) handleUserLink(w http.ResponseWriter, r *http.Request) {
 	u, err := s.store.Get(r.PathValue("id"))
 	if err != nil {

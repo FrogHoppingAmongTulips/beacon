@@ -58,6 +58,7 @@ func (s *Server) routes() http.Handler {
 	mux.HandleFunc("GET /api/stream", s.auth(s.handleStream))
 	mux.HandleFunc("GET /api/users", s.auth(s.handleListUsers))
 	mux.HandleFunc("POST /api/users", s.auth(s.handleAddUser))
+	mux.HandleFunc("PATCH /api/users/{id}", s.auth(s.handleUpdateUser))
 	mux.HandleFunc("DELETE /api/users/{id}", s.auth(s.handleDeleteUser))
 	mux.HandleFunc("GET /api/users/{id}/link", s.auth(s.handleUserLink))
 	mux.HandleFunc("GET /api/users/{id}/qr", s.auth(s.handleUserQR))

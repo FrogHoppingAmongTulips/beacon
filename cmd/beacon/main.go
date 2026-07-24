@@ -49,6 +49,12 @@ func main() {
 		addUser(os.Args[2:])
 	case "list":
 		listUsers()
+	case "enable":
+		setEnabled(os.Args[2:], true)
+	case "disable":
+		setEnabled(os.Args[2:], false)
+	case "rename":
+		renameUser(os.Args[2:])
 	case "reset-password":
 		resetPassword(os.Args[2:])
 	case "version", "-v", "--version":
@@ -73,6 +79,9 @@ func usage() {
   beacon setup [флаги]   первичная настройка
   beacon add-user <имя>  создать ключ (печатает ссылку и QR)
   beacon list            список пользователей
+  beacon enable <id>     включить ключ
+  beacon disable <id>    выключить ключ (без удаления)
+  beacon rename <id> ..  переименовать ключ
   beacon reset-password  сменить пароль панели
   beacon version         версия сборки
 
@@ -215,6 +224,54 @@ func resetPassword(args []string) {
 	cfg.SetPassword(pw)
 	fatal(cfg.Save())
 	fmt.Printf("Новый пароль панели: %s\n", pw)
+}
+
+func setEnabled(args []string, on bool) {
+	if len(args) == 0 {
+		log.Fatal("укажи id: beacon enable|disable <id>")
+	}
+	id := args[0]
+	paths := config.DefaultPaths()
+	cfg, err := config.Load(paths.ConfigFile)
+	fatal(err)
+	st, err := store.Open(paths.DataFile)
+	fatal(err)
+	_, changed, err := st.Update(id, nil, nil, &on)
+	fatal(err)
+	if changed {
+		xr := xray.New(cfg, st, paths.XrayConfig, "xray")
+		if err := xr.Apply(); err != nil {
+			log.Printf("предупреждение: перезапуск Xray: %v", err)
+		}
+	}
+	state := "выключен"
+	if on {
+		state = "включён"
+	}
+	fmt.Printf("ключ %s %s\n", id, state)
+}
+
+func renameUser(args []string) {
+	fs := flag.NewFlagSet("rename", flag.ExitOnError)
+	device := fs.String("device", "", "новое устройство/заметка (опционально)")
+	_ = fs.Parse(args)
+	rest := fs.Args()
+	if len(rest) < 2 {
+		log.Fatal("использование: beacon rename [--device X] <id> <новое имя>")
+	}
+	id := rest[0]
+	name := strings.Join(rest[1:], " ")
+
+	paths := config.DefaultPaths()
+	st, err := store.Open(paths.DataFile)
+	fatal(err)
+	var dev *string
+	if *device != "" {
+		dev = device
+	}
+	u, _, err := st.Update(id, &name, dev, nil)
+	fatal(err)
+	fmt.Printf("переименован: %s → %s\n", id, u.Name)
 }
 
 // ---- helpers ----

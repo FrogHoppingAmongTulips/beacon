@@ -97,6 +97,8 @@
   .empty{padding:26px 16px;text-align:center;color:var(--text3);font-family:var(--mono);font-size:12px;}
   .user{display:grid; grid-template-columns:auto 1fr auto; gap:12px; align-items:center; padding:10px 8px; border-radius:10px; transition:.12s;}
   .user:hover{background:var(--elev);}
+  .user.off{opacity:.5;}
+  .off-badge{color:var(--warn);border:1px solid color-mix(in srgb,var(--warn) 40%,transparent);border-radius:5px;padding:0 5px;font-size:10px;}
   .u-ava{width:34px;height:34px;border-radius:9px;background:var(--elev2);border:1px solid var(--line);display:grid;place-items:center;color:var(--text2);font-family:var(--mono);font-size:13px;font-weight:600;position:relative;flex:none;}
   .u-ava .s{position:absolute;right:-2px;bottom:-2px;width:10px;height:10px;border-radius:50%;border:2px solid var(--bg2);background:var(--text3);}
   .u-ava .s.on{background:var(--accent);}
@@ -239,7 +241,7 @@
 <!-- ADD USER MODAL -->
 <div class="overlay" id="addOverlay">
   <div class="modal">
-    <div class="modal-head"><h3>Новый ключ</h3><button class="icon-btn" data-close="addOverlay" aria-label="Закрыть"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
+    <div class="modal-head"><h3 id="addTitle">Новый ключ</h3><button class="icon-btn" data-close="addOverlay" aria-label="Закрыть"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
     <div class="modal-body" style="align-items:stretch">
       <div class="form-col"><label class="lbl2" for="uName">Имя</label><input class="field" id="uName" placeholder="Например: Артём"></div>
       <div class="form-col"><label class="lbl2" for="uDevice">Устройство / заметка</label><input class="field" id="uDevice" placeholder="iPhone, ноутбук…"></div>
@@ -267,7 +269,7 @@
   const $ = s => document.querySelector(s);
   const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
   const css = v => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
-  const state = { demo:false, users:[], curLink:'', curId:'' };
+  const state = { demo:false, users:[], curLink:'', curId:'', editingId:null };
 
   /* ---------- API ---------- */
   const API = {
@@ -276,6 +278,7 @@
     async logout(){ await fetch('/api/logout',{method:'POST'}); },
     async users(){ const r = await fetch('/api/users'); return r.ok ? r.json() : []; },
     async add(name,device){ const r = await fetch('/api/users',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name,device})}); return r.ok ? r.json() : null; },
+    async update(id,patch){ const r = await fetch('/api/users/'+encodeURIComponent(id),{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify(patch)}); return r.ok ? r.json() : null; },
     async del(id){ return fetch('/api/users/'+encodeURIComponent(id),{method:'DELETE'}); },
   };
 
@@ -329,14 +332,16 @@
     const el = $('#userList');
     if(!list.length){ el.innerHTML = '<div class="empty">Пока нет ключей. Нажми «Добавить пользователя».</div>'; return; }
     el.innerHTML = list.map(u => `
-      <div class="user" data-id="${u.id}">
+      <div class="user ${u.enabled===false?'off':''}" data-id="${u.id}">
         <div class="u-ava">${initial(u.name)}<span class="s ${u.online?'on':''}"></span></div>
         <div class="u-main">
           <div class="u-name">${escapeHtml(u.name)}</div>
-          <div class="u-meta"><span>${escapeHtml(u.device||'—')}</span><span class="data">${fmtBytes((u.bytes_up||0)+(u.bytes_down||0))}</span><span>· ${ago(u.last_seen)}</span></div>
+          <div class="u-meta"><span>${escapeHtml(u.device||'—')}</span><span class="data">${fmtBytes((u.bytes_up||0)+(u.bytes_down||0))}</span><span>· ${ago(u.last_seen)}</span>${u.enabled===false?'<span class="off-badge">выкл</span>':''}</div>
         </div>
         <div class="u-actions">
           <button data-act="qr" title="QR / ссылка">${icon('<rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><path d="M14 14h3v3M20 14v.01M14 20v.01M20 20v.01M17 20h.01"/>')}</button>
+          <button data-act="edit" title="Переименовать">${icon('<path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z"/>')}</button>
+          <button data-act="toggle" title="${u.enabled===false?'Включить':'Выключить'}">${icon('<path d="M12 3v9"/><path d="M6.4 6.4a8 8 0 1 0 11.2 0"/>')}</button>
           <button data-act="copy" title="Копировать ссылку">${icon('<rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/>')}</button>
           <button data-act="del" class="danger" title="Удалить">${icon('<path d="M4 7h16M9 7V5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2M6 7l1 13a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-13"/>')}</button>
         </div>
@@ -349,6 +354,8 @@
     const id = btn.closest('.user').dataset.id;
     const u = state.users.find(x=>x.id===id); if(!u) return;
     if(btn.dataset.act === 'qr') openQR(u);
+    else if(btn.dataset.act === 'edit') openEdit(u);
+    else if(btn.dataset.act === 'toggle') await toggleUser(u);
     else if(btn.dataset.act === 'copy'){ await copy(u.link); flash(btn); }
     else if(btn.dataset.act === 'del'){ if(confirm(`Удалить ключ «${u.name}»? Устройство потеряет доступ.`)) await deleteUser(id); }
   });
@@ -378,14 +385,37 @@
   });
 
   /* ---------- add user ---------- */
-  $('#addBtn').addEventListener('click', () => { $('#uName').value=''; $('#uDevice').value=''; open('addOverlay'); setTimeout(()=>$('#uName').focus(),50); });
-  $('#createBtn').addEventListener('click', createUser);
-  async function createUser(){
+  $('#addBtn').addEventListener('click', () => {
+    state.editingId = null;
+    $('#addTitle').textContent = 'Новый ключ';
+    $('#createBtn').textContent = 'Создать ключ';
+    $('#uName').value=''; $('#uDevice').value='';
+    open('addOverlay'); setTimeout(()=>$('#uName').focus(),50);
+  });
+  function openEdit(u){
+    state.editingId = u.id;
+    $('#addTitle').textContent = 'Изменить ключ';
+    $('#createBtn').textContent = 'Сохранить';
+    $('#uName').value = u.name || ''; $('#uDevice').value = u.device || '';
+    open('addOverlay'); setTimeout(()=>$('#uName').focus(),50);
+  }
+  async function toggleUser(u){
+    const next = (u.enabled === false); // если сейчас выключен → включаем
+    if(state.demo){ u.enabled = next; renderUsers(state.users); return; }
+    await API.update(u.id, {enabled: next}); refreshUsers();
+  }
+  $('#createBtn').addEventListener('click', saveUser);
+  async function saveUser(){
     const name = $('#uName').value.trim() || 'Без имени';
     const device = $('#uDevice').value.trim();
     close('addOverlay');
+    if(state.editingId){
+      const id = state.editingId; state.editingId = null;
+      if(state.demo){ const u = state.users.find(x=>x.id===id); if(u){ u.name=name; u.device=device; } renderUsers(state.users); return; }
+      await API.update(id, {name, device}); await refreshUsers(); return;
+    }
     if(state.demo){
-      const u = { id:'demo-'+Date.now(), name, device, online:false, bytes_up:0, bytes_down:0, last_seen:null,
+      const u = { id:'demo-'+Date.now(), name, device, enabled:true, online:false, bytes_up:0, bytes_down:0, last_seen:null,
         link:'vless://'+crypto.randomUUID()+'@demo-host:443?security=reality&sni=www.microsoft.com&fp=chrome#'+encodeURIComponent(name) };
       state.users.push(u); renderUsers(state.users); openQR(u); return;
     }
@@ -456,9 +486,9 @@
 
   function startDemo(){
     renderUsers([
-      {id:'d1',name:'Артём',device:'iPhone 15',online:true,bytes_up:1.1e9,bytes_down:3.1e9,last_seen:new Date(Date.now()-12000).toISOString(),link:'vless://demo@host:443#Артём'},
-      {id:'d2',name:'MacBook Air',device:'macOS',online:true,bytes_up:6e9,bytes_down:12.6e9,last_seen:new Date(Date.now()-60000).toISOString(),link:'vless://demo@host:443#MacBook'},
-      {id:'d3',name:'Даша',device:'Android',online:false,bytes_up:2e8,bytes_down:6.2e8,last_seen:new Date(Date.now()-3*3600e3).toISOString(),link:'vless://demo@host:443#Даша'},
+      {id:'d1',name:'Артём',device:'iPhone 15',enabled:true,online:true,bytes_up:1.1e9,bytes_down:3.1e9,last_seen:new Date(Date.now()-12000).toISOString(),link:'vless://demo@host:443#Артём'},
+      {id:'d2',name:'MacBook Air',device:'macOS',enabled:true,online:true,bytes_up:6e9,bytes_down:12.6e9,last_seen:new Date(Date.now()-60000).toISOString(),link:'vless://demo@host:443#MacBook'},
+      {id:'d3',name:'Даша',device:'Android',enabled:false,online:false,bytes_up:2e8,bytes_down:6.2e8,last_seen:new Date(Date.now()-3*3600e3).toISOString(),link:'vless://demo@host:443#Даша'},
     ]);
     let dc=48, uc=12, upt=12*86400+4*3600;
     if(reduce){ applyMetrics(demoSample(dc,uc,upt)); return; }

@@ -120,6 +120,33 @@ func (s *Store) Delete(id string) error {
 	return s.persistLocked()
 }
 
+// Update частично обновляет пользователя: применяются только переданные (ненулевые) поля.
+// Возвращает обновлённую копию и флаг, менялось ли Enabled (тогда нужен reload Xray).
+func (s *Store) Update(id string, name, device *string, enabled *bool) (*User, bool, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	u, ok := s.users[id]
+	if !ok {
+		return nil, false, ErrNotFound
+	}
+	enabledChanged := false
+	if name != nil && *name != "" {
+		u.Name = *name
+	}
+	if device != nil {
+		u.Device = *device
+	}
+	if enabled != nil && *enabled != u.Enabled {
+		u.Enabled = *enabled
+		enabledChanged = true
+	}
+	if err := s.persistLocked(); err != nil {
+		return nil, false, err
+	}
+	cp := *u
+	return &cp, enabledChanged, nil
+}
+
 // AddTraffic добавляет дельту трафика пользователю и помечает его активным (last_seen).
 // Вызывается поллером статистики Xray; изменения сразу пишутся на диск.
 func (s *Store) AddTraffic(id string, dUp, dDown uint64, seen time.Time) {
