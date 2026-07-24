@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 	"os/exec"
+	"strings"
 )
 
 // handleInfo отдаёт метаданные сервера и протокола для разделов панели (без секретов вроде приватного ключа).
@@ -42,6 +43,31 @@ func (s *Server) handlePassword(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	writeJSON(w, http.StatusOK, map[string]bool{"ok": true})
+}
+
+// handleMasking меняет маскировочный домен Reality (SNI/dest) и перезапускает Xray.
+// ВНИМАНИЕ: смена SNI инвалидирует уже выданные ключи — их придётся раздать заново.
+func (s *Server) handleMasking(w http.ResponseWriter, r *http.Request) {
+	var req struct {
+		SNI string `json:"sni"`
+	}
+	_ = json.NewDecoder(r.Body).Decode(&req)
+	sni := strings.TrimSpace(req.SNI)
+	if sni == "" || strings.ContainsAny(sni, " /:") {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "укажи домен, напр. www.microsoft.com"})
+		return
+	}
+	s.cfg.SNI = sni
+	s.cfg.Dest = sni + ":443"
+	if err := s.cfg.Save(); err != nil {
+		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "не удалось сохранить"})
+		return
+	}
+	if err := s.xray.Apply(); err != nil {
+		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "сохранено, но Xray не перезапустился: " + err.Error()})
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"ok": true, "sni": sni})
 }
 
 // handleLogs стримит журнал beacon+xray через SSE (journalctl -f). Только чтение.

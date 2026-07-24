@@ -69,6 +69,7 @@ func (s *Server) routes() http.Handler {
 	mux.HandleFunc("GET /api/info", s.auth(s.handleInfo))
 	mux.HandleFunc("GET /api/logs", s.auth(s.handleLogs))
 	mux.HandleFunc("POST /api/password", s.auth(s.handlePassword))
+	mux.HandleFunc("POST /api/masking", s.auth(s.handleMasking))
 
 	return mux
 }
