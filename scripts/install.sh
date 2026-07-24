@@ -64,12 +64,15 @@ install_amneziawg() {
   fi
   log "ставлю AmneziaWG…"
   apt-get install -y software-properties-common >/dev/null 2>&1 || true
-  if add-apt-repository -y ppa:amnezia/ppa >/dev/null 2>&1 \
-    && apt-get update -y >/dev/null 2>&1 \
-    && apt-get install -y amneziawg amneziawg-tools >/dev/null 2>&1; then
+  add-apt-repository -y ppa:amnezia/ppa >/dev/null 2>&1
+  if apt-get update -y >/dev/null 2>&1 && apt-get install -y amneziawg amneziawg-tools >/dev/null 2>&1; then
     log "AmneziaWG установлена"
   else
-    log "предупреждение: не удалось поставить AmneziaWG — переключение протокола в панели будет недоступно, пока не поставишь вручную"
+    # PPA может не поддерживать релиз системы (напр. слишком новый Ubuntu) — тогда битый файл
+    # репозитория ломает все последующие apt-get update, включая обновление самого beacon. Убираем его.
+    rm -f /etc/apt/sources.list.d/amnezia-ubuntu-ppa-*.list /etc/apt/sources.list.d/amnezia-ubuntu-ppa-*.sources
+    apt-get update -y >/dev/null 2>&1 || true
+    log "предупреждение: не удалось поставить AmneziaWG (PPA не поддерживает эту версию системы) — переключение протокола в панели будет недоступно, VLESS+Reality не пострадал"
   fi
 }
 
