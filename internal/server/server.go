@@ -12,6 +12,7 @@ import (
 
 	"golang.org/x/crypto/acme/autocert"
 
+	"beacon/internal/awg"
 	"beacon/internal/config"
 	"beacon/internal/metrics"
 	"beacon/internal/store"
@@ -19,13 +20,14 @@ import (
 	"beacon/web"
 )
 
-// Server связывает конфиг, хранилище, сбор метрик и Xray в один HTTP-сервис.
+// Server связывает конфиг, хранилище, сбор метрик и движки VPN (Xray, AmneziaWG) в один HTTP-сервис.
 type Server struct {
 	cfg      *config.Config
 	paths    config.Paths
 	store    *store.Store
 	coll     *metrics.Collector
 	xray     *xray.Manager
+	awg      *awg.Manager
 	sessions *sessionStore
 	version  string
 
@@ -34,12 +36,13 @@ type Server struct {
 }
 
 // New создаёт сервер.
-func New(cfg *config.Config, paths config.Paths, st *store.Store, xr *xray.Manager, version string) *Server {
+func New(cfg *config.Config, paths config.Paths, st *store.Store, xr *xray.Manager, aw *awg.Manager, version string) *Server {
 	return &Server{
 		cfg:      cfg,
 		paths:    paths,
 		store:    st,
 		xray:     xr,
+		awg:      aw,
 		coll:     metrics.New(),
 		sessions: newSessions(),
 		version:  version,
@@ -66,12 +69,14 @@ func (s *Server) routes() http.Handler {
 	mux.HandleFunc("DELETE /api/users/{id}", s.auth(s.handleDeleteUser))
 	mux.HandleFunc("GET /api/users/{id}/link", s.auth(s.handleUserLink))
 	mux.HandleFunc("GET /api/users/{id}/qr", s.auth(s.handleUserQR))
+	mux.HandleFunc("GET /api/users/{id}/conf", s.auth(s.handleUserConf))
 
 	// сервер, логи, смена пароля
 	mux.HandleFunc("GET /api/info", s.auth(s.handleInfo))
 	mux.HandleFunc("GET /api/logs", s.auth(s.handleLogs))
 	mux.HandleFunc("POST /api/password", s.auth(s.handlePassword))
 	mux.HandleFunc("POST /api/masking", s.auth(s.handleMasking))
+	mux.HandleFunc("POST /api/protocol", s.auth(s.handleProtocol))
 
 	// спидтест
 	mux.HandleFunc("GET /api/speedtest/down", s.auth(s.handleSpeedDown))

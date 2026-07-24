@@ -163,7 +163,8 @@
     <div class="mbody">
       <div class="qr"><img id="qrImg" alt="QR" class="hidden"><canvas id="qrC" width="184" height="184"></canvas></div>
       <div class="linkrow"><code id="qrLink">vless://…</code><button class="btn" style="padding:8px 12px" id="qrCopy">КОПИЯ</button></div>
-      <div class="hint">СКАНИРУЙ В v2rayNG / STREISAND / HIDDIFY</div>
+      <div class="btn-row" id="qrDlRow" style="display:none"><button class="btn full" id="qrDl">СКАЧАТЬ .CONF</button></div>
+      <div class="hint" id="qrHint">СКАНИРУЙ В v2rayNG / STREISAND / HIDDIFY</div>
     </div>
   </div>
 </div>
@@ -214,6 +215,7 @@
     async info(){return (await fetch('/api/info').then(j))||{};},
     async password(pw){return fetch('/api/password',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({password:pw})});},
     async masking(sni){return fetch('/api/masking',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sni})}).then(j);},
+    async protocol(protocol){const r=await fetch('/api/protocol',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({protocol})});try{return await r.json();}catch(_){return null;}},
   };
 
   /* ---------- format ---------- */
@@ -262,10 +264,11 @@
   $('#back').addEventListener('click',goHome);
 
   /* ---------- sections ---------- */
+  const protoName=()=>INFO.protocol==='amneziawg'?'AmneziaWG':'VLESS + Reality';
   const render={
     connection:()=>`
       <div class="status-line"><span class="dot" style="width:9px;height:9px"></span><span class="big">В СЕТИ</span></div>
-      <p class="lede">Сервер ${esc(maskHost(INFO.host))} принимает подключения. Протокол VLESS + Reality, маскировка под ${esc(INFO.sni||'—')}.</p>
+      <p class="lede">Сервер ${esc(maskHost(INFO.host))} принимает подключения. Протокол ${protoName()}${INFO.protocol==='amneziawg'?'':', маскировка под '+esc(INFO.sni||'—')}.</p>
       ${rows([['Аптайм','<span id="r-upt">'+fmtUpt(M.uptSec)+'</span>'],['Активных клиентов','<span id="r-cl">'+onlineN()+' / '+state.users.length+'</span>'],['Внешний адрес',esc(maskHost(INFO.host))+':'+(INFO.vpn_port||443)],['TLS панели',esc(INFO.tls||'self-signed')]])}
       <div class="cluster" style="margin-top:26px">
         <div class="cell"><div class="k">CPU</div><div class="n" id="r-cpu">${Math.round(M.cpu)}<small>%</small></div><div class="sub">load ${(M.load1||0).toFixed(2)}</div></div>
@@ -302,7 +305,7 @@
       <p class="lede">Управляемые узлы. Сейчас подключён один сервер.</p>
       <div class="cluster" style="grid-template-columns:1fr">
         <div class="cell" style="display:flex;justify-content:space-between;align-items:center">
-          <div><div style="font-size:16px;letter-spacing:.06em">${esc(maskHost(INFO.host))}</div><div class="sub" style="margin-top:6px">VLESS · REALITY</div></div>
+          <div><div style="font-size:16px;letter-spacing:.06em">${esc(maskHost(INFO.host))}</div><div class="sub" style="margin-top:6px">${protoName().toUpperCase()}</div></div>
           <div class="stat" style="color:var(--mut);font-size:11px"><span class="dot"></span>В СЕТИ</div>
         </div>
       </div>
@@ -310,23 +313,34 @@
     ipdns:()=>`
       <p class="lede">Сетевые параметры сервера и маскировки Reality.</p>
       ${rows([['Внешний IP',esc(maskHost(INFO.host))],['Порт',INFO.vpn_port||443],['Маскировка (SNI)',esc(INFO.sni||'—')],['Reality dest',esc(INFO.dest||'—')],['Fingerprint',esc(INFO.fingerprint||'—')],['DNS','по умолчанию системы']])}`,
-    security:()=>`
+    security:()=>INFO.protocol==='amneziawg'?`
+      <p class="lede">AmneziaWG — обфусцированный WireGuard, усложняет DPI-фингерпринт случайными параметрами джиттера.</p>
+      ${rows([['Протокол','AmneziaWG'],['Порт',INFO.awg_port||51820],['TLS панели',esc(INFO.tls||'self-signed')]])}`:`
       <p class="lede">Криптография и параметры доступа. Reality маскирует трафик под обычный HTTPS к чужому сайту.</p>
       ${rows([['Протокол','VLESS + Reality'],['Поток','xtls-rprx-vision'],['Публичный ключ',esc(trunc(INFO.public_key,20))],['Short ID',esc((INFO.short_ids&&INFO.short_ids[0])||'—')],['TLS панели',esc(INFO.tls||'self-signed')]])}`,
     logs:()=>`
       <p class="lede">Живой поток журнала beacon и xray. Только чтение.</p>
       <div class="logbox" id="logbox"></div>`,
-    settings:()=>`
+    settings:()=>{
+      const proto=INFO.protocol||'reality';
+      return `
       <p class="lede">Параметры панели. Значения хранятся в /etc/beacon/config.json.</p>
       ${rows([['Адрес панели',esc(INFO.listen||':8443')],['Порт VPN',INFO.vpn_port||443],['Версия',esc(INFO.version||'—')]])}
+      <div class="u-top" style="margin-top:26px"><span class="k up" style="font-size:11px;color:var(--mut)">Протокол VPN</span></div>
+      <div class="btn-row">
+        <button class="btn" id="proto-reality" ${proto==='reality'?'disabled':''}>VLESS + REALITY${proto==='reality'?' ✓':''}</button>
+        <button class="btn" id="proto-awg" ${proto==='amneziawg'?'disabled':''}>AMNEZIAWG${proto==='amneziawg'?' ✓':''}</button>
+      </div>
+      <div class="hint" id="proto-msg" style="text-align:left;margin-top:8px">Активен только один протокол. Переключение перезапускает движок — старые ключи другого протокола перестанут работать, пока не переключишь обратно.</div>
       <div class="u-top" style="margin-top:26px"><span class="k up" style="font-size:11px;color:var(--mut)">Маскировка Reality (SNI)</span></div>
       <div style="display:flex;gap:8px;margin-top:10px"><input class="field" id="set-sni" value="${esc(INFO.sni||'')}" placeholder="www.microsoft.com" style="flex:1"><button class="btn" id="set-sni-save">СОХРАНИТЬ</button></div>
       <div class="hint" id="set-sni-msg" style="text-align:left;margin-top:8px">Смена маскировки перезапускает Xray и инвалидирует текущие ключи — придётся раздать новые.</div>
-      <div class="btn-row"><button class="btn" id="set-ip">${state.revealIP?'СКРЫТЬ IP':'ПОКАЗАТЬ IP'}</button><button class="btn" id="st-pw">СМЕНИТЬ ПАРОЛЬ</button><button class="btn" id="st-out">ВЫЙТИ</button></div>`,
+      <div class="btn-row"><button class="btn" id="set-ip">${state.revealIP?'СКРЫТЬ IP':'ПОКАЗАТЬ IP'}</button><button class="btn" id="st-pw">СМЕНИТЬ ПАРОЛЬ</button><button class="btn" id="st-out">ВЫЙТИ</button></div>`;
+    },
     about:()=>`
       <div style="padding:20px 0 6px"><div class="word up" style="font-size:24px;letter-spacing:.3em">BEACON</div></div>
-      <p class="lede">Self-hosted VPN за одну команду. VLESS + Reality, минималистичная панель.</p>
-      ${rows([['Версия',esc(INFO.version||'—')],['Движок','Xray-core'],['Протокол','VLESS + Reality'],['Лицензия','MIT']])}`,
+      <p class="lede">Self-hosted VPN за одну команду. VLESS + Reality или AmneziaWG, минималистичная панель.</p>
+      ${rows([['Версия',esc(INFO.version||'—')],['Движок',(INFO.protocol==='amneziawg')?'AmneziaWG':'Xray-core'],['Протокол',(INFO.protocol==='amneziawg')?'AmneziaWG':'VLESS + Reality'],['Лицензия','MIT']])}`,
   };
 
   const after={
@@ -346,6 +360,17 @@
         const r=await API.masking(sni);
         if(r&&r.ok){INFO.sni=r.sni||sni;msg.textContent='Готово. Xray перезапущен. Раздай новые ключи.';}else{msg.textContent='Не удалось сохранить';}
       });
+      const switchProto=async(p)=>{
+        const msg=$('#proto-msg');
+        if(state.demo){INFO.protocol=p;msg.textContent='Демо: переключено локально.';openSection('settings');return;}
+        if(!confirm('Переключить протокол на '+(p==='amneziawg'?'AmneziaWG':'VLESS + Reality')+'? Активные ключи другого протокола перестанут работать.'))return;
+        msg.textContent='Переключаю…';
+        const r=await API.protocol(p);
+        if(r&&r.ok){INFO.protocol=r.protocol;msg.textContent='Готово.';openSection('settings');await refreshUsers();}
+        else{msg.textContent=(r&&r.error)||'Не удалось переключить';}
+      };
+      $('#proto-reality').addEventListener('click',()=>switchProto('reality'));
+      $('#proto-awg').addEventListener('click',()=>switchProto('amneziawg'));
     },
   };
 
@@ -392,14 +417,18 @@
   /* ---------- qr ---------- */
   function openQR(u){
     state.curLink=u.link||''; state.curId=u.id;
+    const isAwg=u.protocol==='amneziawg';
     $('#qrTitle').textContent=(u.name||'КЛЮЧ').toUpperCase();
-    $('#qrLink').textContent=u.link||'—';
+    $('#qrLink').textContent=isAwg?'.conf — см. кнопку ниже':(u.link||'—');
+    $('#qrDlRow').style.display=isAwg?'':'none';
+    $('#qrHint').textContent=isAwg?'СКАНИРУЙ В ПРИЛОЖЕНИИ AMNEZIAWG / WIREGUARD':'СКАНИРУЙ В v2rayNG / STREISAND / HIDDIFY';
     const img=$('#qrImg'),cv=$('#qrC');
     if(state.demo){img.classList.add('hidden');cv.classList.remove('hidden');drawQR();}
     else{cv.classList.add('hidden');img.classList.remove('hidden');img.src='/api/users/'+encodeURIComponent(u.id)+'/qr?t='+Date.now();}
     openOv('qrOv');
   }
   $('#qrCopy').addEventListener('click',async e=>{try{await navigator.clipboard.writeText(state.curLink);}catch(_){}e.target.textContent='СКОПИРОВАНО';setTimeout(()=>e.target.textContent='КОПИЯ',1300);});
+  $('#qrDl').addEventListener('click',()=>{if(state.demo||!state.curId)return;window.open('/api/users/'+encodeURIComponent(state.curId)+'/conf','_blank');});
   function drawQR(){
     const c=$('#qrC'),x=c.getContext('2d'),N=29,cell=c.width/N;let s=(Date.now()>>4)&0x7fffffff;
     const rnd=()=>(s=(s*1103515245+12345)&0x7fffffff)/0x7fffffff;

@@ -23,6 +23,7 @@ import (
 	"syscall"
 	"time"
 
+	"beacon/internal/awg"
 	"beacon/internal/config"
 	"beacon/internal/qr"
 	"beacon/internal/server"
@@ -57,6 +58,8 @@ func main() {
 		renameUser(os.Args[2:])
 	case "https":
 		setupHTTPS(os.Args[2:])
+	case "protocol":
+		protocolCmd(os.Args[2:])
 	case "reset-password":
 		resetPassword(os.Args[2:])
 	case "version", "-v", "--version":
@@ -85,6 +88,7 @@ func usage() {
   beacon disable <id>    выключить ключ (без удаления)
   beacon rename <id> ..  переименовать ключ
   beacon https [домен]   HTTPS панели через Let's Encrypt (авто <ip>.sslip.io)
+  beacon protocol [реж]  переключить протокол: reality | amneziawg (без аргумента — показать текущий)
   beacon reset-password  сменить пароль панели
   beacon version         версия сборки
 
@@ -107,8 +111,9 @@ func serve() {
 	if err := xr.WriteConfig(); err != nil {
 		log.Printf("предупреждение: запись конфига Xray: %v", err)
 	}
+	aw := awg.New(cfg, st, paths.AWGConfig)
 
-	srv := server.New(cfg, paths, st, xr, version)
+	srv := server.New(cfg, paths, st, xr, aw, version)
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 
@@ -150,6 +155,16 @@ func setup(args []string) {
 	cfg.PrivateKey = priv
 	cfg.PublicKey = pub
 	cfg.ShortIDs = []string{xray.GenShortID()}
+
+	// ключи и параметры обфускации AmneziaWG генерируем сразу, чтобы переключение протокола было мгновенным
+	awgPriv, awgPub, err := awg.GenerateKeypair()
+	fatal(err)
+	cfg.AWGPrivateKey = awgPriv
+	cfg.AWGPublicKey = awgPub
+	p := awg.GenerateParams()
+	cfg.AWGJc, cfg.AWGJmin, cfg.AWGJmax = p.Jc, p.Jmin, p.Jmax
+	cfg.AWGS1, cfg.AWGS2 = p.S1, p.S2
+	cfg.AWGH1, cfg.AWGH2, cfg.AWGH3, cfg.AWGH4 = p.H1, p.H2, p.H3, p.H4
 
 	pw := firstNonEmpty(*pass, config.GenPassword())
 	cfg.SetPassword(pw)
@@ -253,6 +268,46 @@ func setupHTTPS(args []string) {
 	fmt.Printf("HTTPS включён: https://%s%s\n", domain, cfg.ListenAddr)
 	fmt.Println("Нужен свободный порт 80 и открытые 80/443 в фаерволе.")
 	fmt.Println("Перезапусти: systemctl restart beacon")
+}
+
+// protocolCmd переключает активный VPN-протокол (reality/amneziawg) или печатает текущий без аргумента.
+func protocolCmd(args []string) {
+	paths := config.DefaultPaths()
+	cfg, err := config.Load(paths.ConfigFile)
+	fatal(err)
+	if len(args) == 0 {
+		fmt.Println(cfg.Protocol)
+		return
+	}
+	p := args[0]
+	if p != "reality" && p != "amneziawg" {
+		log.Fatal("протокол должен быть reality или amneziawg")
+	}
+	if p == cfg.Protocol {
+		fmt.Printf("уже активен: %s\n", p)
+		return
+	}
+	cfg.SetPath(paths.ConfigFile)
+	cfg.Protocol = p
+	fatal(cfg.Save())
+
+	st, err := store.Open(paths.DataFile)
+	fatal(err)
+	if p == "amneziawg" {
+		aw := awg.New(cfg, st, paths.AWGConfig)
+		if err := aw.Apply(); err != nil {
+			log.Printf("предупреждение: AmneziaWG не поднялся (%v) — проверь, установлен ли awg-quick", err)
+		}
+	} else {
+		aw := awg.New(cfg, st, paths.AWGConfig)
+		_ = aw.Down()
+		xr := xray.New(cfg, st, paths.XrayConfig, "xray")
+		if err := xr.Apply(); err != nil {
+			log.Printf("предупреждение: перезапуск Xray: %v", err)
+		}
+	}
+	fmt.Printf("протокол переключён: %s\n", p)
+	fmt.Println("перезапусти панель: systemctl restart beacon")
 }
 
 func isIPv4(s string) bool {

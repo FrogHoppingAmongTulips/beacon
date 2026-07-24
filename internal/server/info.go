@@ -29,6 +29,8 @@ func (s *Server) handleInfo(w http.ResponseWriter, r *http.Request) {
 		"acme_domain": s.cfg.ACMEDomain,
 		"uptime_sec":  m.UptimeSec,
 		"tls":         tlsKind,
+		"protocol":    s.cfg.Protocol,
+		"awg_port":    s.cfg.AWGPort,
 	})
 }
 
@@ -73,6 +75,44 @@ func (s *Server) handleMasking(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	writeJSON(w, http.StatusOK, map[string]any{"ok": true, "sni": sni})
+}
+
+// handleProtocol переключает активный VPN-протокол (reality / amneziawg) и поднимает нужный движок.
+func (s *Server) handleProtocol(w http.ResponseWriter, r *http.Request) {
+	var req struct {
+		Protocol string `json:"protocol"`
+	}
+	_ = json.NewDecoder(r.Body).Decode(&req)
+	if req.Protocol != "reality" && req.Protocol != "amneziawg" {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "protocol должен быть reality или amneziawg"})
+		return
+	}
+	if req.Protocol == s.cfg.Protocol {
+		writeJSON(w, http.StatusOK, map[string]any{"ok": true, "protocol": s.cfg.Protocol})
+		return
+	}
+	prev := s.cfg.Protocol
+	s.cfg.Protocol = req.Protocol
+	if err := s.cfg.Save(); err != nil {
+		s.cfg.Protocol = prev
+		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "не удалось сохранить"})
+		return
+	}
+	if req.Protocol == "amneziawg" && s.awg != nil {
+		if err := s.awg.Apply(); err != nil {
+			writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "сохранено, но AmneziaWG не поднялся: " + err.Error()})
+			return
+		}
+	} else {
+		if s.awg != nil {
+			_ = s.awg.Down()
+		}
+		if err := s.xray.Apply(); err != nil {
+			writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "сохранено, но Xray не перезапустился: " + err.Error()})
+			return
+		}
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"ok": true, "protocol": s.cfg.Protocol})
 }
 
 // handleLogs стримит журнал beacon+xray через SSE (journalctl -f). Только чтение.

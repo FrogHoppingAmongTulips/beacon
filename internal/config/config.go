@@ -20,6 +20,7 @@ type Paths struct {
 	CertFile   string // самоподписанный TLS-сертификат панели
 	KeyFile    string // приватный ключ панели
 	XrayConfig string // config.json для Xray-core
+	AWGConfig  string // wg0.conf для AmneziaWG (awg-quick)
 	ACMEDir    string // кеш сертификатов Let's Encrypt
 }
 
@@ -33,6 +34,7 @@ func DefaultPaths() Paths {
 		CertFile:   filepath.Join(base, "panel-cert.pem"),
 		KeyFile:    filepath.Join(base, "panel-key.pem"),
 		XrayConfig: envOr("BEACON_XRAY_CONFIG", "/usr/local/etc/xray/config.json"),
+		AWGConfig:  envOr("BEACON_AWG_CONFIG", "/etc/amnezia/amneziawg/wg0.conf"),
 		ACMEDir:    filepath.Join(base, "acme"),
 	}
 }
@@ -57,6 +59,24 @@ type Config struct {
 	// HTTPS панели через Let's Encrypt. Пусто = самоподписанный сертификат.
 	ACMEDomain string `json:"acme_domain"`
 
+	// Активный протокол VPN: "reality" (по умолчанию) или "amneziawg". Переключение — CLI `beacon protocol`.
+	Protocol string `json:"protocol"`
+
+	// AmneziaWG (обфусцированный WireGuard)
+	AWGPort       int    `json:"awg_port"`
+	AWGPrivateKey string `json:"awg_private_key"`
+	AWGPublicKey  string `json:"awg_public_key"`
+	AWGSubnet     string `json:"awg_subnet"` // напр. 10.66.66.0/24, сервер = .1
+	AWGJc         int    `json:"awg_jc"`
+	AWGJmin       int    `json:"awg_jmin"`
+	AWGJmax       int    `json:"awg_jmax"`
+	AWGS1         int    `json:"awg_s1"`
+	AWGS2         int    `json:"awg_s2"`
+	AWGH1         uint32 `json:"awg_h1"`
+	AWGH2         uint32 `json:"awg_h2"`
+	AWGH3         uint32 `json:"awg_h3"`
+	AWGH4         uint32 `json:"awg_h4"`
+
 	mu   sync.Mutex
 	path string
 }
@@ -69,6 +89,9 @@ func NewDefault() *Config {
 		SNI:         "www.microsoft.com",
 		Dest:        "www.microsoft.com:443",
 		Fingerprint: "chrome",
+		Protocol:    "reality",
+		AWGPort:     51820,
+		AWGSubnet:   "10.66.66.0/24",
 	}
 }
 

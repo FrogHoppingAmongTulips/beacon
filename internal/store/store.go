@@ -27,6 +27,11 @@ type User struct {
 	LastSeen  time.Time `json:"last_seen"`
 	BytesUp   uint64    `json:"bytes_up"`
 	BytesDown uint64    `json:"bytes_down"`
+
+	// AmneziaWG — заполняется, только если ключ создан под этот протокол.
+	AWGPrivateKey string `json:"awg_private_key,omitempty"`
+	AWGPublicKey  string `json:"awg_public_key,omitempty"`
+	AWGIP         string `json:"awg_ip,omitempty"`
 }
 
 // Online — считаем онлайн, если хендшейк был недавно.
@@ -145,6 +150,33 @@ func (s *Store) Update(id string, name, device *string, enabled *bool) (*User, b
 	}
 	cp := *u
 	return &cp, enabledChanged, nil
+}
+
+// SetAWG сохраняет ключи и IP AmneziaWG для пользователя (вызывается при создании ключа под этот протокол).
+func (s *Store) SetAWG(id, priv, pub, ip string) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	u, ok := s.users[id]
+	if !ok {
+		return ErrNotFound
+	}
+	u.AWGPrivateKey = priv
+	u.AWGPublicKey = pub
+	u.AWGIP = ip
+	return s.persistLocked()
+}
+
+// UsedAWGIPs возвращает множество уже занятых адресов AmneziaWG (для выделения следующего свободного).
+func (s *Store) UsedAWGIPs() map[string]bool {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	out := map[string]bool{}
+	for _, u := range s.users {
+		if u.AWGIP != "" {
+			out[u.AWGIP] = true
+		}
+	}
+	return out
 }
 
 // AddTraffic добавляет дельту трафика пользователю и помечает его активным (last_seen).
