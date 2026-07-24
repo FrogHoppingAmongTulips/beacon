@@ -36,18 +36,20 @@ ensure_deps() {
   fi
   export DEBIAN_FRONTEND=noninteractive
   # curl, unzip и ca-certificates нужны установщику Xray; ставим всегда, а не только когда нет curl
-  log "обновляю списки пакетов и ставлю зависимости (curl, unzip, ca-certificates)…"
-  apt-get update -y || die "apt-get update не удался — проверь сеть/репозитории сервера"
-  apt-get install -y curl unzip ca-certificates || die "не удалось поставить curl/unzip/ca-certificates"
+  log "готовлю систему…"
+  local out
+  out="$(apt-get update -y 2>&1)" || { echo "$out"; die "apt-get update не удался — проверь сеть/репозитории сервера"; }
+  out="$(apt-get install -y curl unzip ca-certificates 2>&1)" || { echo "$out"; die "не удалось поставить curl/unzip/ca-certificates"; }
 }
 
 install_xray() {
   if command -v xray >/dev/null 2>&1; then
-    log "Xray-core уже установлен"
     return
   fi
   log "ставлю Xray-core…"
-  bash -c "$(curl -fsSL https://github.com/XTLS/Xray-install/raw/main/install-release.sh)" @ install
+  local out
+  out="$(bash -c "$(curl -fsSL https://github.com/XTLS/Xray-install/raw/main/install-release.sh)" @ install 2>&1)" \
+    || { echo "$out"; die "не удалось поставить Xray-core"; }
 }
 
 install_aqu() {
@@ -111,12 +113,11 @@ main() {
 
   local ip fresh=0; ip="$(public_ip)"
   if [ -f "$AQU_DIR/config.json" ]; then
-    log "aqu уже настроен — обновляю бинарник, конфиг и ключи не трогаю"
+    fresh=0
   else
     fresh=1
-    log "первичная настройка (host=$ip)…"
     # setup генерит Reality-ключи, пароль, первого пользователя и печатает сводку с QR
-    "$BIN" setup --host "$ip" --listen ":${PANEL_PORT}" --port "${VPN_PORT}" --sni "${SNI}"
+    "$BIN" setup --host "$ip" --listen ":${PANEL_PORT}" --port "${VPN_PORT}" --sni "${SNI}" >/tmp/aqu-setup.out
   fi
 
   install_service
@@ -124,15 +125,15 @@ main() {
   systemctl restart xray >/dev/null 2>&1 || log "предупреждение: сервис xray не запустился"
   systemctl enable aqu >/dev/null 2>&1 || true
   systemctl restart aqu || die "не удалось запустить сервис aqu"
-  open_firewall
+  open_firewall >/dev/null
 
   echo
   if [ "$fresh" = "1" ]; then
-    log "готово. Панель: https://${ip}:${PANEL_PORT} — пароль и первый QR в сводке выше."
+    cat /tmp/aqu-setup.out; rm -f /tmp/aqu-setup.out
   else
-    log "обновлено. Панель: https://${ip}:${PANEL_PORT} (пароль и ключи прежние)."
+    log "обновлено."
+    "$BIN" info
   fi
-  log "версия: $("$BIN" version 2>/dev/null). Логи: journalctl -u aqu -f"
 }
 
 main "$@"

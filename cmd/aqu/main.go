@@ -38,12 +38,14 @@ var version = "dev"
 func main() {
 	log.SetFlags(0)
 	if len(os.Args) < 2 {
-		serve()
+		info()
 		return
 	}
 	switch os.Args[1] {
 	case "serve":
 		serve()
+	case "info":
+		info()
 	case "setup":
 		setup(os.Args[2:])
 	case "add-user":
@@ -80,7 +82,8 @@ func main() {
 func usage() {
 	fmt.Print(`aqu — панель self-hosted VPN (VLESS + Reality)
 
-  aqu                 запустить веб-панель
+  aqu                 показать адрес панели (пароль забыл — aqu reset-password)
+  aqu serve           запустить веб-панель (так её запускает systemd)
   aqu setup [флаги]   первичная настройка
   aqu add-user <имя>  создать ключ (печатает ссылку и QR)
   aqu list            список пользователей
@@ -94,6 +97,18 @@ func usage() {
 
 setup флаги: --host, --listen, --port, --sni, --password, --user, --force
 `)
+}
+
+// info печатает адрес панели — напоминание для того, кто забыл ссылку/пароль.
+// Сам пароль хранится только в виде хеша и не восстанавливается — только сброс.
+func info() {
+	paths := config.DefaultPaths()
+	cfg, err := config.Load(paths.ConfigFile)
+	if err != nil {
+		log.Fatalf("нет конфига %s — сначала выполни `aqu setup`", paths.ConfigFile)
+	}
+	fmt.Printf("панель: %s\n", panelURL(cfg))
+	fmt.Println("пароль забыл — aqu reset-password")
 }
 
 // serve запускает веб-панель.
