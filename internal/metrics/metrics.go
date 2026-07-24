@@ -21,8 +21,6 @@ type Sample struct {
 	Load5      float64 `json:"load5"`       // load average 5m
 	Load15     float64 `json:"load15"`      // load average 15m
 	UptimeSec  int64   `json:"uptime_sec"`  // секунд с запуска ОС
-	DiskFree   uint64  `json:"disk_free"`   // байт свободно на диске (/)
-	DiskTotal  uint64  `json:"disk_total"`  // байт всего на диске (/)
 	Timestamp  int64   `json:"ts"`          // unix ms
 }
 
@@ -55,9 +53,6 @@ func (c *Collector) Sample() Sample {
 	// load average + uptime
 	s.Load1, s.Load5, s.Load15 = readLoadAvg()
 	s.UptimeSec = readUptime()
-
-	// диск (корневой раздел)
-	s.DiskTotal, s.DiskFree = readDisk("/")
 
 	// CPU (дельта)
 	cpu := readCPU()

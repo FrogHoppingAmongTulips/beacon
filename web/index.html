@@ -133,7 +133,7 @@
   <div class="top">
     <button class="back" id="back"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6l-6 6 6 6"/></svg>НАЗАД</button>
     <div class="word">AQU</div>
-    <div class="stat" style="margin-left:26px"><span class="mono" id="topSys">CPU —% · RAM — ГБ · ДИСК —</span></div>
+    <div class="stat" style="margin-left:26px"><span class="mono" id="topSys">CPU —% · RAM — ГБ</span></div>
     <div class="sp"></div>
     <div class="stat" id="topStat"><span class="dot"></span><span id="topWork">WORK</span></div>
   </div>
@@ -202,7 +202,7 @@
   const GB=1024**3;
   const state={demo:false,users:[],editing:null,curLink:'',curId:'',metricsES:null,logsES:null,demoTimer:null,logTimer:null,revealIP:false};
   let INFO={};
-  const M={cpu:0,ram:0,ramT:0,dn:0,up:0,uptSec:0,load1:0,diskFree:0,diskT:0};
+  const M={cpu:0,ram:0,ramT:0,dn:0,up:0,uptSec:0,load1:0};
   const dnArr=[],upArr=[],MAX=60; for(let i=0;i<MAX;i++){dnArr.push(0);upArr.push(0);}
 
   /* ---------- API ---------- */
@@ -533,7 +533,6 @@
     M.cpu=m.cpu||0; M.ram=(m.mem_used||0)/GB; M.ramT=(m.mem_total||0)/GB;
     M.dn=(m.net_rx_bps||0)*8/1e6; M.up=(m.net_tx_bps||0)*8/1e6;
     M.uptSec=m.uptime_sec||0; M.load1=m.load1||0;
-    M.diskFree=(m.disk_free||0)/GB; M.diskT=(m.disk_total||0)/GB;
     dnArr.push(M.dn);dnArr.shift();upArr.push(M.up);upArr.shift();
     refreshLive();
   }
@@ -566,8 +565,7 @@
   function setTop(){setWork(true);setTopStat();}
   function setTopStat(){
     const el=$('#topSys'); if(!el)return;
-    const disk=M.diskT?M.diskFree.toFixed(0)+'<small>/'+M.diskT.toFixed(0)+' ГБ</small>':'—';
-    el.innerHTML='CPU '+Math.round(M.cpu)+'% · RAM '+(M.ramT?M.ram.toFixed(1):'0')+'<small>/'+(M.ramT||0).toFixed(1)+' ГБ</small> · ДИСК '+disk;
+    el.innerHTML='CPU '+Math.round(M.cpu)+'% · RAM '+(M.ramT?M.ram.toFixed(1):'0')+'<small>/'+(M.ramT||0).toFixed(1)+' ГБ</small>';
   }
   async function startApp(){
     $('#loginOv').classList.remove('open');
