@@ -1,22 +1,22 @@
 #!/usr/bin/env bash
 #
-# beacon — установка self-hosted VPN (Xray VLESS+Reality) и веб-панели одной командой.
+# aqu — установка self-hosted VPN (Xray VLESS+Reality) и веб-панели одной командой.
 # Запускать от root на Debian/Ubuntu:
 #   curl -fsSL https://<твой-хост>/install | bash
 #
 set -euo pipefail
 
-BEACON_DIR="/etc/beacon"
-BIN="/usr/local/bin/beacon"
+AQU_DIR="/etc/aqu"
+BIN="/usr/local/bin/aqu"
 # Репозиторий с релизами (замени на свой) — или переопредели через переменные окружения.
-BEACON_REPO="${BEACON_REPO:-FrogHoppingAmongTulips/beacon}"
-BASE_URL="${BEACON_URL:-https://github.com/${BEACON_REPO}/releases/latest/download}"
+AQU_REPO="${AQU_REPO:-FrogHoppingAmongTulips/aqu}"
+BASE_URL="${AQU_URL:-https://github.com/${AQU_REPO}/releases/latest/download}"
 PANEL_PORT="${PANEL_PORT:-8443}"
 VPN_PORT="${VPN_PORT:-443}"
 SNI="${SNI:-www.microsoft.com}"
 
-log()  { printf '\033[36m[beacon]\033[0m %s\n' "$*"; }
-die()  { printf '\033[31m[beacon] %s\033[0m\n' "$*" >&2; exit 1; }
+log()  { printf '\033[36m[aqu]\033[0m %s\n' "$*"; }
+die()  { printf '\033[31m[aqu] %s\033[0m\n' "$*" >&2; exit 1; }
 
 require_root() { [ "$(id -u)" = "0" ] || die "запусти от root (sudo bash …)"; }
 
@@ -50,14 +50,14 @@ install_xray() {
   bash -c "$(curl -fsSL https://github.com/XTLS/Xray-install/raw/main/install-release.sh)" @ install
 }
 
-install_beacon() {
+install_aqu() {
   local arch tmp; arch="$(detect_arch)"; tmp="${BIN}.new"
-  log "скачиваю beacon ($arch)…"
+  log "скачиваю aqu ($arch)…"
   # качаем во временный файл и делаем atomic rename — запись прямо в $BIN
-  # падает с ETXTBSY, если сервис beacon уже запущен и держит бинарник открытым
-  if ! curl -fsSL "$BASE_URL/beacon-linux-$arch" -o "$tmp"; then
+  # падает с ETXTBSY, если сервис aqu уже запущен и держит бинарник открытым
+  if ! curl -fsSL "$BASE_URL/aqu-linux-$arch" -o "$tmp"; then
     rm -f "$tmp"
-    die "не удалось скачать бинарник beacon. Проверь BASE_URL или собери из исходников: go build -o $BIN ./cmd/beacon"
+    die "не удалось скачать бинарник aqu. Проверь BASE_URL или собери из исходников: go build -o $BIN ./cmd/aqu"
   fi
   chmod +x "$tmp"
   mv -f "$tmp" "$BIN"
@@ -78,9 +78,9 @@ open_firewall() {
 }
 
 install_service() {
-  cat >/etc/systemd/system/beacon.service <<EOF
+  cat >/etc/systemd/system/aqu.service <<EOF
 [Unit]
-Description=beacon VPN panel
+Description=aqu VPN panel
 After=network-online.target
 Wants=network-online.target
 
@@ -104,14 +104,14 @@ main() {
   install_xray
   # AmneziaWG временно отключена в установщике: PPA amnezia/ppa не поддерживает
   # свежие релизы Ubuntu (напр. 26.04 "resolute" — 404), ломает apt. Панель
-  # умеет переключаться на amneziawg (beacon protocol amneziawg), но ставить
+  # умеет переключаться на amneziawg (aqu protocol amneziawg), но ставить
   # awg-quick пока нужно вручную.
-  install_beacon           # всегда качает свежий бинарник — это же путь обновления
-  mkdir -p "$BEACON_DIR"
+  install_aqu              # всегда качает свежий бинарник — это же путь обновления
+  mkdir -p "$AQU_DIR"
 
   local ip fresh=0; ip="$(public_ip)"
-  if [ -f "$BEACON_DIR/config.json" ]; then
-    log "beacon уже настроен — обновляю бинарник, конфиг и ключи не трогаю"
+  if [ -f "$AQU_DIR/config.json" ]; then
+    log "aqu уже настроен — обновляю бинарник, конфиг и ключи не трогаю"
   else
     fresh=1
     log "первичная настройка (host=$ip)…"
@@ -122,8 +122,8 @@ main() {
   install_service
   systemctl enable xray  >/dev/null 2>&1 || true
   systemctl restart xray >/dev/null 2>&1 || log "предупреждение: сервис xray не запустился"
-  systemctl enable beacon >/dev/null 2>&1 || true
-  systemctl restart beacon || die "не удалось запустить сервис beacon"
+  systemctl enable aqu >/dev/null 2>&1 || true
+  systemctl restart aqu || die "не удалось запустить сервис aqu"
   open_firewall
 
   echo
@@ -132,7 +132,7 @@ main() {
   else
     log "обновлено. Панель: https://${ip}:${PANEL_PORT} (пароль и ключи прежние)."
   fi
-  log "версия: $("$BIN" version 2>/dev/null). Логи: journalctl -u beacon -f"
+  log "версия: $("$BIN" version 2>/dev/null). Логи: journalctl -u aqu -f"
 }
 
 main "$@"

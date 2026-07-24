@@ -3,8 +3,8 @@ package awg
 import (
 	"fmt"
 
-	"beacon/internal/config"
-	"beacon/internal/store"
+	"aqu/internal/config"
+	"aqu/internal/store"
 )
 
 // ClientConfig формирует .conf для устройства пользователя (совместим с Amnezia/WireGuard-клиентами).

@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="color-scheme" content="dark">
-<title>beacon — control center</title>
+<title>aqu — control center</title>
 <style>
   :root{
     --bg:#000; --line:#1c1c1c; --line2:#2c2c2c; --ink:#fff; --mut:#8a8a8a; --faint:#565656;
@@ -130,7 +130,7 @@
 <div class="wrap">
   <div class="top">
     <button class="back" id="back"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6l-6 6 6 6"/></svg>НАЗАД</button>
-    <div class="word">BEACON</div>
+    <div class="word">AQU</div>
     <div class="sp"></div>
     <div class="stat" id="topStat"><span class="dot"></span><span id="topHost">В СЕТИ</span></div>
   </div>
@@ -146,7 +146,7 @@
 <!-- LOGIN -->
 <div class="ov" id="loginOv">
   <div class="login-box">
-    <div class="word up">BEACON</div>
+    <div class="word up">AQU</div>
     <div class="cap">ВХОД В ПАНЕЛЬ</div>
     <form id="loginForm" style="display:flex;flex-direction:column;gap:14px">
       <input class="field" id="pw" type="password" placeholder="Пароль" autocomplete="current-password" autofocus>
@@ -164,7 +164,7 @@
       <div class="qr"><img id="qrImg" alt="QR" class="hidden"><canvas id="qrC" width="184" height="184"></canvas></div>
       <div class="linkrow"><code id="qrLink">vless://…</code><button class="btn" style="padding:8px 12px" id="qrCopy">КОПИЯ</button></div>
       <div class="btn-row" id="qrDlRow" style="display:none"><button class="btn full" id="qrDl">СКАЧАТЬ .CONF</button></div>
-      <div class="hint" id="qrHint">СКАНИРУЙ В v2rayNG / STREISAND / HIDDIFY</div>
+      <div class="hint" id="qrHint">СКАНИРУЙ В v2rayNG · SHADOWROCKET · AMNEZIA · HAPP · STREISAND / HIDDIFY</div>
     </div>
   </div>
 </div>
@@ -174,7 +174,7 @@
   <div class="modal">
     <div class="mhead"><div class="t" id="addTitle">НОВЫЙ КЛЮЧ</div><button data-close="addOv"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
     <div class="mbody" style="align-items:stretch">
-      <div class="flabel">Имя</div><input class="field" id="fName" placeholder="Например: Артём">
+      <div class="flabel">Имя</div><input class="field" id="fName" placeholder="Имя">
       <button class="btn full" id="fSave" style="margin-top:6px">СОЗДАТЬ КЛЮЧ</button>
     </div>
   </div>
@@ -319,17 +319,17 @@
       <p class="lede">Криптография и параметры доступа. Reality маскирует трафик под обычный HTTPS к чужому сайту.</p>
       ${rows([['Протокол','VLESS + Reality'],['Поток','xtls-rprx-vision'],['Публичный ключ',esc(trunc(INFO.public_key,20))],['Short ID',esc((INFO.short_ids&&INFO.short_ids[0])||'—')],['TLS панели',esc(INFO.tls||'self-signed')]])}`,
     logs:()=>`
-      <p class="lede">Живой поток журнала beacon и xray. Только чтение.</p>
+      <p class="lede">Живой поток журнала aqu и xray. Только чтение.</p>
       <div class="logbox" id="logbox"></div>`,
     settings:()=>`
-      <p class="lede">Параметры панели. Значения хранятся в /etc/beacon/config.json.</p>
+      <p class="lede">Параметры панели. Значения хранятся в /etc/aqu/config.json.</p>
       ${rows([['Адрес панели',esc(INFO.listen||':8443')],['Порт VPN',INFO.vpn_port||443],['Версия',esc(INFO.version||'—')]])}
       <div class="u-top" style="margin-top:26px"><span class="k up" style="font-size:11px;color:var(--mut)">Маскировка Reality (SNI)</span></div>
       <div style="display:flex;gap:8px;margin-top:10px"><input class="field" id="set-sni" value="${esc(INFO.sni||'')}" placeholder="www.microsoft.com" style="flex:1"><button class="btn" id="set-sni-save">СОХРАНИТЬ</button></div>
       <div class="hint" id="set-sni-msg" style="text-align:left;margin-top:8px">Смена маскировки перезапускает Xray и инвалидирует текущие ключи — придётся раздать новые.</div>
       <div class="btn-row"><button class="btn" id="set-ip">${state.revealIP?'СКРЫТЬ IP':'ПОКАЗАТЬ IP'}</button><button class="btn" id="st-pw">СМЕНИТЬ ПАРОЛЬ</button><button class="btn" id="st-out">ВЫЙТИ</button></div>`,
     about:()=>`
-      <div style="padding:20px 0 6px"><div class="word up" style="font-size:24px;letter-spacing:.3em">BEACON</div></div>
+      <div style="padding:20px 0 6px"><div class="word up" style="font-size:24px;letter-spacing:.3em">AQU</div></div>
       <p class="lede">Self-hosted VPN за одну команду. VLESS + Reality или AmneziaWG, минималистичная панель.</p>
       ${rows([['Версия',esc(INFO.version||'—')],['Движок',(INFO.protocol==='amneziawg')?'AmneziaWG':'Xray-core'],['Протокол',(INFO.protocol==='amneziawg')?'AmneziaWG':'VLESS + Reality'],['Лицензия','MIT']])}`,
   };
@@ -401,7 +401,7 @@
     $('#qrTitle').textContent=(u.name||'КЛЮЧ').toUpperCase();
     $('#qrLink').textContent=isAwg?'.conf — см. кнопку ниже':(u.link||'—');
     $('#qrDlRow').style.display=isAwg?'':'none';
-    $('#qrHint').textContent=isAwg?'СКАНИРУЙ В ПРИЛОЖЕНИИ AMNEZIAWG / WIREGUARD':'СКАНИРУЙ В v2rayNG / STREISAND / HIDDIFY';
+    $('#qrHint').textContent=isAwg?'СКАНИРУЙ В ПРИЛОЖЕНИИ AMNEZIAWG / WIREGUARD':'СКАНИРУЙ В v2rayNG · SHADOWROCKET · AMNEZIA · HAPP · STREISAND / HIDDIFY';
     const img=$('#qrImg'),cv=$('#qrC');
     if(state.demo){img.classList.add('hidden');cv.classList.remove('hidden');drawQR();}
     else{cv.classList.add('hidden');img.classList.remove('hidden');img.src='/api/users/'+encodeURIComponent(u.id)+'/qr?t='+Date.now();}
@@ -455,7 +455,7 @@
   function startLogs(){
     const box=$('#logbox'); if(!box)return; box.innerHTML=''; const cur=cursor(); box.appendChild(cur);
     if(state.demo){
-      const samples=['xray  accepted tcp · reality ok · sni=www.microsoft.com','beacon  stats poll · online 3/5 · 61.2 GB','beacon  user online · +842 KB','xray  connection closed · idle timeout','beacon  GET /api/metrics 200 · 0.4ms'];
+      const samples=['xray  accepted tcp · reality ok · sni=www.microsoft.com','aqu  stats poll · online 3/5 · 61.2 GB','aqu  user online · +842 KB','xray  connection closed · idle timeout','aqu  GET /api/metrics 200 · 0.4ms'];
       for(let i=0;i<12;i++)appendLog(box,new Date().toTimeString().slice(0,8)+'  '+samples[i%samples.length],cur);
       if(!reduce)state.logTimer=setInterval(()=>{if(current!=='logs'){clearInterval(state.logTimer);return;}appendLog(box,new Date().toTimeString().slice(0,8)+'  '+samples[Math.random()*samples.length|0],cur);},1000);
     }else{

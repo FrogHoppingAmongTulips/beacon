@@ -115,7 +115,7 @@ func (s *Server) handleProtocol(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, map[string]any{"ok": true, "protocol": s.cfg.Protocol})
 }
 
-// handleLogs стримит журнал beacon+xray через SSE (journalctl -f). Только чтение.
+// handleLogs стримит журнал aqu+xray через SSE (journalctl -f). Только чтение.
 func (s *Server) handleLogs(w http.ResponseWriter, r *http.Request) {
 	flusher, ok := w.(http.Flusher)
 	if !ok {
@@ -131,7 +131,7 @@ func (s *Server) handleLogs(w http.ResponseWriter, r *http.Request) {
 		flusher.Flush()
 	}
 
-	cmd := exec.CommandContext(r.Context(), "journalctl", "-u", "beacon", "-u", "xray", "-n", "80", "-f", "-o", "short-iso", "--no-pager")
+	cmd := exec.CommandContext(r.Context(), "journalctl", "-u", "aqu", "-u", "xray", "-n", "80", "-f", "-o", "short-iso", "--no-pager")
 	stdout, err := cmd.StdoutPipe()
 	if err == nil {
 		err = cmd.Start()

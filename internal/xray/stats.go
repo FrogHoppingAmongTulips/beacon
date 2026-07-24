@@ -4,7 +4,7 @@ import (
 	"context"
 	"time"
 
-	"beacon/internal/store"
+	"aqu/internal/store"
 )
 
 // StatsPoller периодически читает трафик из Xray Stats API и обновляет пользователей.

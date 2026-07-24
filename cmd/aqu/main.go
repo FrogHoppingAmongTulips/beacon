@@ -1,13 +1,13 @@
-// Команда beacon: веб-панель и CLI для self-hosted VPN (VLESS + Reality).
+// Команда aqu: веб-панель и CLI для self-hosted VPN (VLESS + Reality).
 //
 // Использование:
 //
-//	beacon                 запустить панель (по умолчанию)
-//	beacon serve           то же самое
-//	beacon setup [флаги]   первичная настройка: ключи, пароль, первый пользователь
-//	beacon add-user <имя>  создать ключ и напечатать ссылку + QR
-//	beacon list            список пользователей
-//	beacon reset-password  сменить пароль панели
+//	aqu                 запустить панель (по умолчанию)
+//	aqu serve           то же самое
+//	aqu setup [флаги]   первичная настройка: ключи, пароль, первый пользователь
+//	aqu add-user <имя>  создать ключ и напечатать ссылку + QR
+//	aqu list            список пользователей
+//	aqu reset-password  сменить пароль панели
 package main
 
 import (
@@ -23,13 +23,13 @@ import (
 	"syscall"
 	"time"
 
-	"beacon/internal/awg"
-	"beacon/internal/config"
-	"beacon/internal/qr"
-	"beacon/internal/server"
-	"beacon/internal/store"
-	"beacon/internal/vpn"
-	"beacon/internal/xray"
+	"aqu/internal/awg"
+	"aqu/internal/config"
+	"aqu/internal/qr"
+	"aqu/internal/server"
+	"aqu/internal/store"
+	"aqu/internal/vpn"
+	"aqu/internal/xray"
 )
 
 // version подставляется при сборке через -ldflags "-X main.version=...".
@@ -78,19 +78,19 @@ func main() {
 }
 
 func usage() {
-	fmt.Print(`beacon — панель self-hosted VPN (VLESS + Reality)
+	fmt.Print(`aqu — панель self-hosted VPN (VLESS + Reality)
 
-  beacon                 запустить веб-панель
-  beacon setup [флаги]   первичная настройка
-  beacon add-user <имя>  создать ключ (печатает ссылку и QR)
-  beacon list            список пользователей
-  beacon enable <id>     включить ключ
-  beacon disable <id>    выключить ключ (без удаления)
-  beacon rename <id> ..  переименовать ключ
-  beacon https [домен]   HTTPS панели через Let's Encrypt (авто <ip>.sslip.io)
-  beacon protocol [реж]  переключить протокол: reality | amneziawg (без аргумента — показать текущий)
-  beacon reset-password  сменить пароль панели
-  beacon version         версия сборки
+  aqu                 запустить веб-панель
+  aqu setup [флаги]   первичная настройка
+  aqu add-user <имя>  создать ключ (печатает ссылку и QR)
+  aqu list            список пользователей
+  aqu enable <id>     включить ключ
+  aqu disable <id>    выключить ключ (без удаления)
+  aqu rename <id> ..  переименовать ключ
+  aqu https [домен]   HTTPS панели через Let's Encrypt (авто <ip>.sslip.io)
+  aqu protocol [реж]  переключить протокол: reality | amneziawg (без аргумента — показать текущий)
+  aqu reset-password  сменить пароль панели
+  aqu version         версия сборки
 
 setup флаги: --host, --listen, --port, --sni, --password, --user, --force
 `)
@@ -101,7 +101,7 @@ func serve() {
 	paths := config.DefaultPaths()
 	cfg, err := config.Load(paths.ConfigFile)
 	if err != nil {
-		log.Fatalf("нет конфига %s — сначала выполни `beacon setup` (%v)", paths.ConfigFile, err)
+		log.Fatalf("нет конфига %s — сначала выполни `aqu setup` (%v)", paths.ConfigFile, err)
 	}
 	st, err := store.Open(paths.DataFile)
 	fatal(err)
@@ -189,7 +189,7 @@ func addUser(args []string) {
 	_ = fs.Parse(args)
 	name := strings.TrimSpace(strings.Join(fs.Args(), " "))
 	if name == "" {
-		log.Fatal("укажи имя: beacon add-user <имя>")
+		log.Fatal("укажи имя: aqu add-user <имя>")
 	}
 
 	paths := config.DefaultPaths()
@@ -243,7 +243,7 @@ func resetPassword(args []string) {
 	fatal(cfg.Save())
 	fmt.Printf("пароль: %s\n", pw)
 	fmt.Printf("панель: %s\n", panelURL(cfg))
-	fmt.Println("применится после: systemctl restart beacon")
+	fmt.Println("применится после: systemctl restart aqu")
 }
 
 // setupHTTPS включает Let's Encrypt для домена (по умолчанию авто <ip>.sslip.io).
@@ -259,7 +259,7 @@ func setupHTTPS(args []string) {
 		domain = strings.ReplaceAll(cfg.PublicHost, ".", "-") + ".sslip.io"
 	}
 	if domain == "" {
-		log.Fatal("укажи домен: beacon https <домен>")
+		log.Fatal("укажи домен: aqu https <домен>")
 	}
 	cfg.SetPath(paths.ConfigFile)
 	cfg.ACMEDomain = domain
@@ -267,7 +267,7 @@ func setupHTTPS(args []string) {
 
 	fmt.Printf("HTTPS включён: https://%s%s\n", domain, cfg.ListenAddr)
 	fmt.Println("Нужен свободный порт 80 и открытые 80/443 в фаерволе.")
-	fmt.Println("Перезапусти: systemctl restart beacon")
+	fmt.Println("Перезапусти: systemctl restart aqu")
 }
 
 // protocolCmd переключает активный VPN-протокол (reality/amneziawg) или печатает текущий без аргумента.
@@ -307,7 +307,7 @@ func protocolCmd(args []string) {
 		}
 	}
 	fmt.Printf("протокол переключён: %s\n", p)
-	fmt.Println("перезапусти панель: systemctl restart beacon")
+	fmt.Println("перезапусти панель: systemctl restart aqu")
 }
 
 func isIPv4(s string) bool {
@@ -317,7 +317,7 @@ func isIPv4(s string) bool {
 
 func setEnabled(args []string, on bool) {
 	if len(args) == 0 {
-		log.Fatal("укажи id: beacon enable|disable <id>")
+		log.Fatal("укажи id: aqu enable|disable <id>")
 	}
 	id := args[0]
 	paths := config.DefaultPaths()
@@ -346,7 +346,7 @@ func renameUser(args []string) {
 	_ = fs.Parse(args)
 	rest := fs.Args()
 	if len(rest) < 2 {
-		log.Fatal("использование: beacon rename [--device X] <id> <новое имя>")
+		log.Fatal("использование: aqu rename [--device X] <id> <новое имя>")
 	}
 	id := rest[0]
 	name := strings.Join(rest[1:], " ")

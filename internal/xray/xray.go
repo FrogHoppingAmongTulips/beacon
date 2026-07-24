@@ -1,5 +1,5 @@
 // Package xray собирает config.json для Xray-core (VLESS + Reality)
-// из настроек beacon и списка пользователей, перезапускает сервис и читает статистику трафика.
+// из настроек aqu и списка пользователей, перезапускает сервис и читает статистику трафика.
 package xray
 
 import (
@@ -11,8 +11,8 @@ import (
 	"strconv"
 	"strings"
 
-	"beacon/internal/config"
-	"beacon/internal/store"
+	"aqu/internal/config"
+	"aqu/internal/store"
 )
 
 // Локальный gRPC-эндпоинт Stats API внутри Xray (доступен только с 127.0.0.1).
@@ -30,12 +30,12 @@ type Manager struct {
 	bin        string // путь к бинарнику xray (для api-команд)
 }
 
-// New создаёт менеджер. service обычно "xray". Путь к бинарнику можно переопределить BEACON_XRAY_BIN.
+// New создаёт менеджер. service обычно "xray". Путь к бинарнику можно переопределить AQU_XRAY_BIN.
 func New(cfg *config.Config, st *store.Store, configPath, service string) *Manager {
 	if service == "" {
 		service = "xray"
 	}
-	bin := os.Getenv("BEACON_XRAY_BIN")
+	bin := os.Getenv("AQU_XRAY_BIN")
 	if bin == "" {
 		bin = "xray"
 	}

@@ -13,7 +13,7 @@ import (
 	"os"
 	"time"
 
-	"beacon/internal/config"
+	"aqu/internal/config"
 )
 
 // ensureCert загружает существующий сертификат панели или генерирует самоподписанный.
@@ -29,7 +29,7 @@ func ensureCert(p config.Paths) (tls.Certificate, error) {
 	}
 	tmpl := x509.Certificate{
 		SerialNumber:          big.NewInt(time.Now().UnixNano()),
-		Subject:               pkix.Name{CommonName: "beacon panel"},
+		Subject:               pkix.Name{CommonName: "aqu panel"},
 		NotBefore:             time.Now().Add(-time.Hour),
 		NotAfter:              time.Now().AddDate(10, 0, 0),
 		KeyUsage:              x509.KeyUsageDigitalSignature,

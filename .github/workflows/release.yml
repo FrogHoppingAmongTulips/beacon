@@ -25,7 +25,7 @@ jobs:
         with:
           generate_release_notes: true
           files: |
-            dist/beacon-linux-amd64
-            dist/beacon-linux-arm64
+            dist/aqu-linux-amd64
+            dist/aqu-linux-arm64
             dist/checksums.txt
             dist/install.sh

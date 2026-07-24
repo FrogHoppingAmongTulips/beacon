@@ -1,5 +1,5 @@
-BINARY  := beacon
-PKG     := ./cmd/beacon
+BINARY  := aqu
+PKG     := ./cmd/aqu
 VERSION ?= $(shell git describe --tags --always --dirty 2>/dev/null || echo dev)
 LDFLAGS := -s -w -X main.version=$(VERSION)
 PLATFORMS := linux/amd64 linux/arm64

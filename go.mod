@@ -1,4 +1,4 @@
-module beacon
+module aqu
 
 go 1.25.0
 

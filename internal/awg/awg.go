@@ -7,8 +7,8 @@ import (
 	"path/filepath"
 	"strings"
 
-	"beacon/internal/config"
-	"beacon/internal/store"
+	"aqu/internal/config"
+	"aqu/internal/store"
 )
 
 // Manager собирает server-side конфиг wg0.conf и применяет его через awg-quick.

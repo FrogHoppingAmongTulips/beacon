@@ -1,4 +1,4 @@
-// Package config хранит постоянные настройки и секреты панели beacon.
+// Package config хранит постоянные настройки и секреты панели aqu.
 package config
 
 import (
@@ -14,7 +14,7 @@ import (
 
 // Paths — расположение файлов на диске.
 type Paths struct {
-	BaseDir    string // каталог beacon, по умолчанию /etc/beacon
+	BaseDir    string // каталог aqu, по умолчанию /etc/aqu
 	ConfigFile string // config.json
 	DataFile   string // users.json
 	CertFile   string // самоподписанный TLS-сертификат панели
@@ -26,15 +26,15 @@ type Paths struct {
 
 // DefaultPaths возвращает пути с учётом переменных окружения (удобно для dev).
 func DefaultPaths() Paths {
-	base := envOr("BEACON_DIR", "/etc/beacon")
+	base := envOr("AQU_DIR", "/etc/aqu")
 	return Paths{
 		BaseDir:    base,
 		ConfigFile: filepath.Join(base, "config.json"),
 		DataFile:   filepath.Join(base, "users.json"),
 		CertFile:   filepath.Join(base, "panel-cert.pem"),
 		KeyFile:    filepath.Join(base, "panel-key.pem"),
-		XrayConfig: envOr("BEACON_XRAY_CONFIG", "/usr/local/etc/xray/config.json"),
-		AWGConfig:  envOr("BEACON_AWG_CONFIG", "/etc/amnezia/amneziawg/wg0.conf"),
+		XrayConfig: envOr("AQU_XRAY_CONFIG", "/usr/local/etc/xray/config.json"),
+		AWGConfig:  envOr("AQU_AWG_CONFIG", "/etc/amnezia/amneziawg/wg0.conf"),
 		ACMEDir:    filepath.Join(base, "acme"),
 	}
 }
@@ -59,7 +59,7 @@ type Config struct {
 	// HTTPS панели через Let's Encrypt. Пусто = самоподписанный сертификат.
 	ACMEDomain string `json:"acme_domain"`
 
-	// Активный протокол VPN: "reality" (по умолчанию) или "amneziawg". Переключение — CLI `beacon protocol`.
+	// Активный протокол VPN: "reality" (по умолчанию) или "amneziawg". Переключение — CLI `aqu protocol`.
 	Protocol string `json:"protocol"`
 
 	// AmneziaWG (обфусцированный WireGuard)

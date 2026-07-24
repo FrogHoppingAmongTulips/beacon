@@ -10,7 +10,7 @@ import (
 )
 
 const (
-	cookieName = "beacon_session"
+	cookieName = "aqu_session"
 	sessionTTL = 12 * time.Hour
 )
 

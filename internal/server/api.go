@@ -7,10 +7,10 @@ import (
 	"net/http"
 	"time"
 
-	"beacon/internal/awg"
-	"beacon/internal/qr"
-	"beacon/internal/store"
-	"beacon/internal/vpn"
+	"aqu/internal/awg"
+	"aqu/internal/qr"
+	"aqu/internal/store"
+	"aqu/internal/vpn"
 )
 
 // userDTO — представление пользователя для панели (со ссылкой подключения или AmneziaWG-конфигом).

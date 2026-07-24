@@ -6,8 +6,8 @@ import (
 	"net/url"
 	"strconv"
 
-	"beacon/internal/config"
-	"beacon/internal/store"
+	"aqu/internal/config"
+	"aqu/internal/store"
 )
 
 // Link формирует строку vless://uuid@host:port?...#name для пользователя.

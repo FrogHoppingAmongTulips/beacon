@@ -1,4 +1,4 @@
-// Package server поднимает веб-панель beacon: HTTPS, авторизация, REST API и SSE-стрим метрик.
+// Package server поднимает веб-панель aqu: HTTPS, авторизация, REST API и SSE-стрим метрик.
 package server
 
 import (
@@ -12,12 +12,12 @@ import (
 
 	"golang.org/x/crypto/acme/autocert"
 
-	"beacon/internal/awg"
-	"beacon/internal/config"
-	"beacon/internal/metrics"
-	"beacon/internal/store"
-	"beacon/internal/xray"
-	"beacon/web"
+	"aqu/internal/awg"
+	"aqu/internal/config"
+	"aqu/internal/metrics"
+	"aqu/internal/store"
+	"aqu/internal/xray"
+	"aqu/web"
 )
 
 // Server связывает конфиг, хранилище, сбор метрик и движки VPN (Xray, AmneziaWG) в один HTTP-сервис.
@@ -104,14 +104,14 @@ func (s *Server) Run(ctx context.Context) error {
 		}
 		srv.TLSConfig = m.TLSConfig()
 		go func() { _ = http.ListenAndServe(":80", m.HTTPHandler(nil)) }() // HTTP-01 challenge на :80
-		log.Printf("панель beacon (Let's Encrypt): https://%s%s", s.cfg.ACMEDomain, s.cfg.ListenAddr)
+		log.Printf("панель aqu (Let's Encrypt): https://%s%s", s.cfg.ACMEDomain, s.cfg.ListenAddr)
 	} else {
 		cert, err := ensureCert(s.paths)
 		if err != nil {
 			return err
 		}
 		srv.TLSConfig = &tls.Config{Certificates: []tls.Certificate{cert}, MinVersion: tls.VersionTLS12}
-		log.Printf("панель beacon: https://<адрес-сервера>%s", s.cfg.ListenAddr)
+		log.Printf("панель aqu: https://<адрес-сервера>%s", s.cfg.ListenAddr)
 	}
 
 	go func() {
