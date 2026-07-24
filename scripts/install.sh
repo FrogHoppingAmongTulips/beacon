@@ -116,8 +116,16 @@ main() {
     fresh=0
   else
     fresh=1
+    # скрипт обычно запущен через curl|bash — stdin занят самим скриптом,
+    # поэтому читаем имя из /dev/tty; если терминала нет (автоматический прогон), тихо берём дефолт
+    local user_name="Первый ключ"
+    if [ -t 0 ] || [ -r /dev/tty ]; then
+      printf '\033[36m[aqu]\033[0m имя первого ключа [Первый ключ]: ' > /dev/tty
+      read -r input < /dev/tty || true
+      [ -n "$input" ] && user_name="$input"
+    fi
     # setup генерит Reality-ключи, пароль, первого пользователя и печатает сводку с QR
-    "$BIN" setup --host "$ip" --listen ":${PANEL_PORT}" --port "${VPN_PORT}" --sni "${SNI}" >/tmp/aqu-setup.out
+    "$BIN" setup --host "$ip" --listen ":${PANEL_PORT}" --port "${VPN_PORT}" --sni "${SNI}" --user "$user_name" >/tmp/aqu-setup.out
   fi
 
   install_service

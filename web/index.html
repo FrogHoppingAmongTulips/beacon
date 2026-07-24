@@ -132,7 +132,7 @@
     <button class="back" id="back"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6l-6 6 6 6"/></svg>НАЗАД</button>
     <div class="word">AQU</div>
     <div class="sp"></div>
-    <div class="stat" id="topStat"><span class="dot"></span><span id="topHost">В СЕТИ</span></div>
+    <div class="stat" id="topStat"><span class="dot"></span><span id="topHost">В СЕТИ · CPU —% · ↓— Mbps</span></div>
   </div>
 
   <div id="home"><div class="grid" id="grid"></div></div>
@@ -233,17 +233,14 @@
   const ic={
     connection:'<path d="M9.5 14.5l5-5"/><path d="M12 6.5l1-1a3.5 3.5 0 0 1 5 5l-1 1"/><path d="M12 17.5l-1 1a3.5 3.5 0 0 1-5-5l1-1"/>',
     speed:'<path d="M4 16a8 8 0 0 1 16 0"/><path d="M12 16l4.5-3.2"/><circle cx="12" cy="16" r="1.1"/>',
-    bandwidth:'<path d="M8 20V5"/><path d="M4.5 8.5L8 5l3.5 3.5"/><path d="M16 4v15"/><path d="M12.5 15.5L16 19l3.5-3.5"/>',
     usage:'<circle cx="12" cy="12" r="8"/><path d="M12 12V4"/><path d="M12 12l6.5 3.4"/>',
     users:'<circle cx="9" cy="8.5" r="3"/><path d="M3.5 19a5.5 5.5 0 0 1 11 0"/><path d="M16 6.2a3 3 0 0 1 0 5.6"/><path d="M17.5 13.5a5.5 5.5 0 0 1 3 5"/>',
-    servers:'<rect x="4" y="4" width="16" height="5" rx="1"/><rect x="4" y="11" width="16" height="5" rx="1"/><circle cx="7.5" cy="6.5" r=".6"/><circle cx="7.5" cy="13.5" r=".6"/><path d="M11 18.5h9"/>',
-    ipdns:'<circle cx="12" cy="12" r="8.5"/><path d="M3.5 12h17"/><path d="M12 3.5c2.8 2.5 2.8 14.5 0 17M12 3.5c-2.8 2.5-2.8 14.5 0 17"/>',
     security:'<path d="M12 3.5l7 2.6v5.1c0 4.2-3 7-7 8.8-4-1.8-7-4.6-7-8.8V6.1z"/><path d="M9.3 12l1.9 1.9 3.5-3.8"/>',
     logs:'<rect x="3.5" y="4.5" width="17" height="15" rx="2"/><path d="M7.5 10l3 2.5-3 2.5"/><path d="M12.5 15h4.5"/>',
     settings:'<path d="M4 8h9"/><path d="M17 8h3"/><circle cx="15" cy="8" r="2.1"/><path d="M4 16h4"/><path d="M12 16h8"/><circle cx="10" cy="16" r="2.1"/>',
     about:'<circle cx="12" cy="12" r="8.5"/><path d="M12 11v5.2"/><circle cx="12" cy="7.8" r=".7" fill="currentColor" stroke="none"/>',
   };
-  const tiles=[['connection','CONNECTION'],['speed','SPEED'],['bandwidth','BANDWIDTH'],['usage','USAGE'],['users','USERS'],['servers','SERVERS'],['ipdns','IP & DNS'],['security','SECURITY'],['logs','LOGS'],['settings','SETTINGS'],['about','ABOUT']];
+  const tiles=[['connection','CONNECTION'],['speed','SPEED'],['usage','USAGE'],['users','USERS'],['security','SECURITY'],['logs','LOGS'],['settings','SETTINGS'],['about','ABOUT']];
   $('#grid').innerHTML=tiles.map(([k,l])=>`<button class="tile" data-k="${k}"><svg viewBox="0 0 24 24">${ic[k]}</svg><span class="lbl">${l}</span></button>`).join('');
   $$('.tile').forEach(t=>t.addEventListener('click',()=>openSection(t.dataset.k)));
 
@@ -269,7 +266,7 @@
     connection:()=>`
       <div class="status-line"><span class="dot" style="width:9px;height:9px"></span><span class="big">В СЕТИ</span></div>
       <p class="lede">Сервер ${esc(maskHost(INFO.host))} принимает подключения. Протокол ${protoName()}${INFO.protocol==='amneziawg'?'':', маскировка под '+esc(INFO.sni||'—')}.</p>
-      ${rows([['Аптайм','<span id="r-upt">'+fmtUpt(M.uptSec)+'</span>'],['Активных клиентов','<span id="r-cl">'+onlineN()+' / '+state.users.length+'</span>'],['Внешний адрес',esc(maskHost(INFO.host))+':'+(INFO.vpn_port||443)],['TLS панели',esc(INFO.tls||'self-signed')]])}
+      ${rows([['Аптайм','<span id="r-upt">'+fmtUpt(M.uptSec)+'</span>'],['Активных клиентов','<span id="r-cl">'+onlineN()+' / '+state.users.length+'</span>'],['Внешний адрес',esc(maskHost(INFO.host))+':'+(INFO.vpn_port||443)],['Порт панели',esc((INFO.listen||':8443'))],['TLS панели',esc(INFO.tls||'self-signed')]])}
       <div class="cluster" style="margin-top:26px">
         <div class="cell"><div class="k">CPU</div><div class="n" id="r-cpu">${Math.round(M.cpu)}<small>%</small></div><div class="sub">load ${(M.load1||0).toFixed(2)}</div></div>
         <div class="cell"><div class="k">RAM</div><div class="n" id="r-ram">${M.ramT?M.ram.toFixed(1):'0'}<small>/${(M.ramT||0).toFixed(1)} ГБ</small></div></div>
@@ -284,10 +281,9 @@
         <div class="cell"><div class="k">Ping</div><div class="n" id="s-pg">—<small>ms</small></div></div>
       </div>
       <div class="hint" id="s-stage" style="text-align:left;margin-top:14px">Нажми «Запустить тест»</div>
-      <div class="btn-row"><button class="btn" id="s-run">ЗАПУСТИТЬ ТЕСТ</button></div>`,
-    bandwidth:()=>`
-      <p class="lede">Трафик сервера в реальном времени, последние 60 секунд.</p>
-      <div class="chart-box"><canvas id="bwC" height="150"></canvas></div>
+      <div class="btn-row"><button class="btn" id="s-run">ЗАПУСТИТЬ ТЕСТ</button></div>
+      <div class="u-top" style="margin-top:30px"><span class="k up" style="font-size:11px;color:var(--mut)">Трафик сервера, последние 60 сек</span></div>
+      <div class="chart-box" style="margin-top:10px"><canvas id="bwC" height="150"></canvas></div>
       <div class="legend"><span><i></i>ЗАГРУЗКА <span class="mono" id="bw-dn" style="color:#fff">${fmtMbps(M.dn)}</span></span><span><i class="dash"></i>ОТДАЧА <span class="mono" id="bw-up" style="color:#fff">${fmtMbps(M.up)}</span></span></div>`,
     usage:()=>{
       const tot=state.users.reduce((a,u)=>a+(u.bytes_up||0)+(u.bytes_down||0),0);
@@ -301,23 +297,11 @@
       <div class="u-top"><span class="k up" style="font-size:11px;color:var(--mut)">Ключи доступа</span><span class="c">${state.users.length} КЛЮЧЕЙ</span></div>
       <div class="ulist" id="ulist"></div>
       <div class="btn-row"><button class="btn full" id="u-add">+ ДОБАВИТЬ ПОЛЬЗОВАТЕЛЯ</button></div>`,
-    servers:()=>`
-      <p class="lede">Управляемые узлы. Сейчас подключён один сервер.</p>
-      <div class="cluster" style="grid-template-columns:1fr">
-        <div class="cell" style="display:flex;justify-content:space-between;align-items:center">
-          <div><div style="font-size:16px;letter-spacing:.06em">${esc(maskHost(INFO.host))}</div><div class="sub" style="margin-top:6px">${protoName().toUpperCase()}</div></div>
-          <div class="stat" style="color:var(--mut);font-size:11px"><span class="dot"></span>В СЕТИ</div>
-        </div>
-      </div>
-      ${rows([['Внешний IP',esc(maskHost(INFO.host))],['Порт VPN',(INFO.vpn_port||443)+' / tcp'],['Порт панели',esc((INFO.listen||':8443'))+' / tcp'],['CPU','<span id="r-cpu">'+Math.round(M.cpu)+'</span> %'],['RAM',(M.ramT?M.ram.toFixed(1):'0')+' / '+(M.ramT||0).toFixed(1)+' ГБ'],['Аптайм','<span id="r-upt">'+fmtUpt(M.uptSec)+'</span>']])}`,
-    ipdns:()=>`
-      <p class="lede">Сетевые параметры сервера и маскировки Reality.</p>
-      ${rows([['Внешний IP',esc(maskHost(INFO.host))],['Порт',INFO.vpn_port||443],['Маскировка (SNI)',esc(INFO.sni||'—')],['Reality dest',esc(INFO.dest||'—')],['Fingerprint',esc(INFO.fingerprint||'—')],['DNS','по умолчанию системы']])}`,
     security:()=>INFO.protocol==='amneziawg'?`
       <p class="lede">AmneziaWG — обфусцированный WireGuard, усложняет DPI-фингерпринт случайными параметрами джиттера.</p>
-      ${rows([['Протокол','AmneziaWG'],['Порт',INFO.awg_port||51820],['TLS панели',esc(INFO.tls||'self-signed')]])}`:`
-      <p class="lede">Криптография и параметры доступа. Reality маскирует трафик под обычный HTTPS к чужому сайту.</p>
-      ${rows([['Протокол','VLESS + Reality'],['Поток','xtls-rprx-vision'],['Публичный ключ',esc(trunc(INFO.public_key,20))],['Short ID',esc((INFO.short_ids&&INFO.short_ids[0])||'—')],['TLS панели',esc(INFO.tls||'self-signed')]])}`,
+      ${rows([['Протокол','AmneziaWG'],['Внешний IP',esc(maskHost(INFO.host))],['Порт',INFO.awg_port||51820],['DNS','по умолчанию системы'],['TLS панели',esc(INFO.tls||'self-signed')]])}`:`
+      <p class="lede">Криптография, параметры доступа и сеть. Reality маскирует трафик под обычный HTTPS к чужому сайту.</p>
+      ${rows([['Протокол','VLESS + Reality'],['Поток','xtls-rprx-vision'],['Публичный ключ',esc(trunc(INFO.public_key,20))],['Short ID',esc((INFO.short_ids&&INFO.short_ids[0])||'—')],['Внешний IP',esc(maskHost(INFO.host))],['Маскировка (SNI)',esc(INFO.sni||'—')],['Reality dest',esc(INFO.dest||'—')],['Fingerprint',esc(INFO.fingerprint||'—')],['DNS','по умолчанию системы'],['TLS панели',esc(INFO.tls||'self-signed')]])}`,
     logs:()=>`
       <p class="lede">Живой поток журнала aqu и xray. Только чтение.</p>
       <div class="logbox" id="logbox"></div>`,
@@ -336,9 +320,8 @@
 
   const after={
     users:()=>{renderUsers();$('#u-add').addEventListener('click',openAdd);},
-    bandwidth:()=>drawBW(),
     logs:()=>startLogs(),
-    speed:()=>$('#s-run').addEventListener('click',runSpeed),
+    speed:()=>{$('#s-run').addEventListener('click',runSpeed);drawBW();},
     settings:()=>{
       $('#st-pw').addEventListener('click',()=>{$('#npw').value='';$('#pwErr').textContent='';openOv('pwOv');});
       $('#st-out').addEventListener('click',doLogout);
@@ -359,10 +342,10 @@
   function renderUsers(){
     const el=$('#ulist'); if(!el)return;
     if(!state.users.length){el.innerHTML='<div class="empty">Пока нет ключей. Нажми «Добавить пользователя».</div>';return;}
-    el.innerHTML=state.users.map(u=>`
+    el.innerHTML=state.users.map((u,i)=>`
       <div class="u ${u.enabled===false?'off':''}" data-id="${esc(u.id)}">
         <div class="ava">${esc((u.name||'?')[0].toUpperCase())}<span class="s ${u.online?'on':''}"></span></div>
-        <div><div class="uname">${esc(u.name)}</div><div class="umeta"><span class="d">${fmtB((u.bytes_up||0)+(u.bytes_down||0))}</span><span>· ${ago(u.last_seen)}</span>${u.enabled===false?'<span class="obadge">ВЫКЛ</span>':''}</div></div>
+        <div><div class="uname">${esc(u.name)}${i===0?'<span class="obadge" style="margin-left:8px">ПЕРВЫЙ</span>':''}</div><div class="umeta"><span class="d">${fmtB((u.bytes_up||0)+(u.bytes_down||0))}</span><span>· ${ago(u.last_seen)}</span>${u.enabled===false?'<span class="obadge">ВЫКЛ</span>':''}</div></div>
         <div class="uacts">
           <button data-a="qr" title="QR">${svgi('<rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><path d="M14 14h3v3M20 20h.01M17 20h.01M20 17h.01"/>')}</button>
           <button data-a="edit" title="Изменить">${svgi('<path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/>')}</button>
@@ -552,21 +535,21 @@
   }
   function set(id,v){const e=$(id);if(e)e.innerHTML=v;}
   function refreshLive(){
-    if(current==='connection'||current==='servers'){
-      set('#r-cpu',Math.round(M.cpu)+(current==='connection'?'<small>%</small>':''));
-      set('#r-upt',fmtUpt(M.uptSec));
-    }
     if(current==='connection'){
+      set('#r-cpu',Math.round(M.cpu)+'<small>%</small>');
+      set('#r-upt',fmtUpt(M.uptSec));
       set('#r-ram',(M.ramT?M.ram.toFixed(1):'0')+'<small>/'+(M.ramT||0).toFixed(1)+' ГБ</small>');
       set('#r-dn',fmtMbps(M.dn)+'<small>Mbps</small>');set('#r-up',fmtMbps(M.up)+'<small>Mbps</small>');
       set('#r-cl',onlineN()+' / '+state.users.length);
     }
-    if(current==='bandwidth'){drawBW();set('#bw-dn',fmtMbps(M.dn));set('#bw-up',fmtMbps(M.up));}
+    if(current==='speed'){drawBW();set('#bw-dn',fmtMbps(M.dn));set('#bw-up',fmtMbps(M.up));}
+    setTopStat();
   }
   function connectMetrics(){try{state.metricsES=new EventSource('/api/stream');state.metricsES.onmessage=e=>{try{applyMetrics(JSON.parse(e.data))}catch(_){}};}catch(_){}}
 
   /* ---------- boot ---------- */
-  function setTop(){const h=maskHost(INFO.host||location.hostname||'').toUpperCase();$('#topHost').textContent=h&&h!=='—'?('В СЕТИ · '+h):'В СЕТИ';}
+  function setTop(){setTopStat();}
+  function setTopStat(){const el=$('#topHost');if(el)el.textContent='В СЕТИ · CPU '+Math.round(M.cpu)+'% · ↓'+fmtMbps(M.dn)+' Mbps';}
   async function startApp(){
     $('#loginOv').classList.remove('open');
     if(state.demo){INFO={version:'demo',host:'demo-host',vpn_port:443,listen:':8443',sni:'www.microsoft.com',dest:'www.microsoft.com:443',fingerprint:'chrome',public_key:'12R6C36yvy7w_jO6dZHnRx',short_ids:['268abbed4aed34fc'],tls:'self-signed'};state.users=demoUsers();startDemo();setTop();return;}
@@ -590,7 +573,7 @@
   async function doLogout(){ if(!state.demo)await API.logout(); location.reload(); }
   $('#loginForm').addEventListener('submit',async e=>{e.preventDefault();const ok=await API.login($('#pw').value);if(ok){startApp();}else{$('#loginErr').textContent='Неверный пароль';$('#pw').select();}});
 
-  window.addEventListener('resize',()=>{if(current==='bandwidth')drawBW();});
+  window.addEventListener('resize',()=>{if(current==='speed')drawBW();});
 
   (async()=>{
     try{ const a=await API.session(); if(a)startApp(); else $('#loginOv').classList.add('open'); }
