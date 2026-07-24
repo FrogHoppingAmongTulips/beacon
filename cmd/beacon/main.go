@@ -226,7 +226,9 @@ func resetPassword(args []string) {
 	cfg.SetPath(paths.ConfigFile)
 	cfg.SetPassword(pw)
 	fatal(cfg.Save())
-	fmt.Printf("Новый пароль панели: %s\n", pw)
+	fmt.Printf("пароль: %s\n", pw)
+	fmt.Printf("панель: %s\n", panelURL(cfg))
+	fmt.Println("применится после: systemctl restart beacon")
 }
 
 // setupHTTPS включает Let's Encrypt для домена (по умолчанию авто <ip>.sslip.io).
@@ -310,19 +312,13 @@ func renameUser(args []string) {
 
 func printSummary(cfg *config.Config, pw, link string) {
 	fmt.Println()
-	fmt.Println("──────────────  beacon установлен  ──────────────")
-	fmt.Printf("  Панель:  %s\n", panelURL(cfg))
-	fmt.Printf("  Пароль:  %s\n", pw)
-	fmt.Println("  (сертификат самоподписанный — браузер предупредит, это ок)")
-	fmt.Println()
-	fmt.Println("  Первый ключ подключения (vless):")
-	fmt.Printf("  %s\n", link)
+	fmt.Printf("панель:  %s\n", panelURL(cfg))
+	fmt.Printf("пароль:  %s\n", pw)
+	fmt.Printf("ключ:    %s\n", link)
 	fmt.Println()
 	if a, err := qr.ASCII(link); err == nil {
 		fmt.Println(a)
 	}
-	fmt.Println("  Отсканируй QR в v2rayNG / Streisand / Hiddify.")
-	fmt.Println("─────────────────────────────────────────────────")
 }
 
 // panelURL собирает URL панели из публичного хоста и адреса прослушивания.
