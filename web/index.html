@@ -3,515 +3,519 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="color-scheme" content="dark light">
-<title>beacon — VPN панель</title>
+<meta name="color-scheme" content="dark">
+<title>beacon — control center</title>
 <style>
   :root{
-    --bg:#0D1014; --bg2:#12161C; --elev:#171C24; --elev2:#1C222B;
-    --line:#232A33; --line2:#2E3742;
-    --text:#E7ECF2; --text2:#98A3B2; --text3:#5F6A79;
-    --accent:#21C7A8; --accent-soft:rgba(33,199,168,.14); --accent-ink:#04140F;
-    --warn:#E8A33D; --crit:#F0616D;
-    --radius:14px; --radius-sm:9px;
+    --bg:#000; --line:#1c1c1c; --line2:#2c2c2c; --ink:#fff; --mut:#8a8a8a; --faint:#565656;
+    --sans:-apple-system,system-ui,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
     --mono:ui-monospace,"SF Mono","JetBrains Mono",Menlo,Consolas,monospace;
-    --sans:system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
-    --shadow:0 1px 0 rgba(255,255,255,.02) inset, 0 12px 30px -18px rgba(0,0,0,.7);
   }
-  @media (prefers-color-scheme: light){
-    :root{
-      --bg:#EEF1F4; --bg2:#FFFFFF; --elev:#FFFFFF; --elev2:#F7F9FB;
-      --line:#E3E8ED; --line2:#D2DAE1;
-      --text:#101620; --text2:#54606E; --text3:#8B96A3;
-      --accent:#0FA88D; --accent-soft:rgba(15,168,141,.12); --accent-ink:#FFFFFF;
-      --warn:#B9791C; --crit:#D64550;
-      --shadow:0 1px 0 rgba(255,255,255,.6) inset, 0 14px 34px -22px rgba(20,30,45,.45);
-    }
-  }
-  :root[data-theme="dark"]{ --bg:#0D1014; --bg2:#12161C; --elev:#171C24; --elev2:#1C222B; --line:#232A33; --line2:#2E3742; --text:#E7ECF2; --text2:#98A3B2; --text3:#5F6A79; --accent:#21C7A8; --accent-soft:rgba(33,199,168,.14); --accent-ink:#04140F; --warn:#E8A33D; --crit:#F0616D; }
-  :root[data-theme="light"]{ --bg:#EEF1F4; --bg2:#FFFFFF; --elev:#FFFFFF; --elev2:#F7F9FB; --line:#E3E8ED; --line2:#D2DAE1; --text:#101620; --text2:#54606E; --text3:#8B96A3; --accent:#0FA88D; --accent-soft:rgba(15,168,141,.12); --accent-ink:#FFFFFF; --warn:#B9791C; --crit:#D64550; }
-
   *{box-sizing:border-box}
-  html,body{margin:0}
-  body{background:var(--bg); color:var(--text); font-family:var(--sans); line-height:1.45; -webkit-font-smoothing:antialiased;}
-  .app{max-width:1180px; margin:0 auto; padding:22px clamp(14px,3vw,28px) 40px;}
+  html,body{margin:0;background:var(--bg);color:var(--ink);}
+  body{font-family:var(--sans);-webkit-font-smoothing:antialiased;font-weight:300;}
+  .wrap{max-width:1240px;margin:0 auto;min-height:100vh;border-left:1px solid var(--line);border-right:1px solid var(--line);}
+  .up{text-transform:uppercase;letter-spacing:.16em;}
+  .mono{font-family:var(--mono);font-variant-numeric:tabular-nums;}
   .hidden{display:none!important}
+  button{font-family:inherit}
 
-  .eyebrow{font-family:var(--mono); font-size:11px; letter-spacing:.12em; text-transform:uppercase; color:var(--text3);}
-  .tnum{font-variant-numeric:tabular-nums; font-family:var(--mono);}
+  .top{display:flex;align-items:center;gap:16px;padding:20px 26px;border-bottom:1px solid var(--line);}
+  .top .word{font-size:15px;letter-spacing:.28em;font-weight:300;}
+  .top .sp{flex:1}
+  .top .stat{display:flex;align-items:center;gap:9px;font-size:11px;color:var(--mut);letter-spacing:.14em;}
+  .dot{width:7px;height:7px;border-radius:50%;background:#fff;box-shadow:0 0 0 0 rgba(255,255,255,.5);animation:pl 2.6s infinite;}
+  @keyframes pl{0%{box-shadow:0 0 0 0 rgba(255,255,255,.35)}100%{box-shadow:0 0 0 7px rgba(255,255,255,0)}}
+  .back{display:none;align-items:center;gap:8px;background:none;border:none;color:var(--mut);cursor:pointer;font-size:11px;letter-spacing:.14em;padding:4px;}
+  .back:hover{color:#fff}
+  .back svg{width:16px;height:16px}
 
-  .topbar{display:flex; align-items:center; gap:16px; padding:6px 2px 20px;}
-  .brand{display:flex; align-items:center; gap:11px; min-width:0;}
-  .mark{width:34px; height:34px; border-radius:10px; background:var(--accent-soft); display:grid; place-items:center; border:1px solid color-mix(in srgb,var(--accent) 30%, transparent); flex:none;}
-  .brand h1{font-size:15px; margin:0; font-weight:650; letter-spacing:-.01em;}
-  .brand .sub{font-family:var(--mono); font-size:11px; color:var(--text3);}
-  .server-chip{display:flex; align-items:center; gap:8px; padding:6px 11px; background:var(--elev); border:1px solid var(--line); border-radius:999px; font-family:var(--mono); font-size:12px; color:var(--text2);}
-  .server-chip b{color:var(--text); font-weight:600;}
-  .spacer{flex:1}
-  .status{display:flex; align-items:center; gap:8px; font-size:13px; color:var(--text2);}
-  .dot{width:8px; height:8px; border-radius:50%; background:var(--accent); position:relative; flex:none;}
-  .dot::after{content:""; position:absolute; inset:-4px; border-radius:50%; background:var(--accent); opacity:.35; animation:pulse 2.4s ease-out infinite;}
-  .dot.off{background:var(--text3);} .dot.off::after{display:none;}
-  @keyframes pulse{0%{transform:scale(.6);opacity:.5}100%{transform:scale(2.2);opacity:0}}
-  .icon-btn{width:34px;height:34px;border-radius:9px;border:1px solid var(--line);background:var(--elev); color:var(--text2);display:grid;place-items:center;cursor:pointer;transition:.15s;}
-  .icon-btn:hover{color:var(--text);border-color:var(--line2);background:var(--elev2);}
+  .grid{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:var(--line);}
+  .tile{background:#000;aspect-ratio:1/0.66;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:20px;cursor:pointer;transition:background .2s;border:none;color:#fff;}
+  .tile:hover{background:#0b0b0b}
+  .tile svg{width:42px;height:42px;fill:none;stroke:#fff;stroke-width:1.35;stroke-linecap:round;stroke-linejoin:round;}
+  .tile .lbl{font-size:11.5px;letter-spacing:.17em;color:var(--mut);text-transform:uppercase;transition:color .2s;}
+  .tile:hover .lbl{color:#fff}
 
-  .stats{display:grid; grid-template-columns:repeat(5,1fr); gap:12px; margin-bottom:14px;}
-  .tile{background:var(--bg2); border:1px solid var(--line); border-radius:var(--radius); padding:14px 15px 13px; box-shadow:var(--shadow); position:relative; overflow:hidden;}
-  .tile .lbl{display:flex; align-items:center; justify-content:space-between; margin-bottom:9px;}
-  .tile .val{font-family:var(--mono); font-variant-numeric:tabular-nums; font-size:26px; font-weight:600; letter-spacing:-.02em; line-height:1;}
-  .tile .val small{font-size:13px; color:var(--text3); font-weight:500; margin-left:2px;}
-  .tile .foot{margin-top:8px; font-family:var(--mono); font-size:11px; color:var(--text3); display:flex; gap:6px; align-items:center;}
-  .meter{height:4px; border-radius:3px; background:var(--line); overflow:hidden; margin-top:10px;}
-  .meter > i{display:block; height:100%; background:var(--accent); border-radius:3px; transition:width .6s cubic-bezier(.4,0,.2,1);}
-  .meter.warn > i{background:var(--warn);}
-  .updown{display:flex; gap:14px; align-items:baseline;}
-  .updown .u{display:flex; align-items:baseline; gap:5px;}
-  .arrow{font-family:var(--mono); font-size:12px;}
-  .arrow.dn{color:var(--accent);} .arrow.up{color:var(--warn);}
+  .section{display:none}
+  .sec-head{display:flex;align-items:center;gap:16px;padding:22px 26px;border-bottom:1px solid var(--line);}
+  .sec-head .t{font-size:13px;letter-spacing:.18em;text-transform:uppercase;}
+  .sec-head .idx{margin-left:auto;font-family:var(--mono);font-size:11px;color:var(--faint);}
+  .sec-body{padding:26px;}
+  .lede{font-size:13px;color:var(--mut);line-height:1.7;max-width:60ch;margin:0 0 26px;font-weight:300;}
 
-  .split{display:grid; grid-template-columns:1.35fr 1fr; gap:12px;}
-  .panel{background:var(--bg2); border:1px solid var(--line); border-radius:var(--radius); box-shadow:var(--shadow);}
-  .panel-head{display:flex; align-items:center; justify-content:space-between; padding:14px 16px 10px;}
-  .panel-head h2{font-size:13px; margin:0; font-weight:600; color:var(--text);}
-  .chart-wrap{padding:2px 8px 12px;}
-  canvas.chart{width:100%; height:150px; display:block;}
-  .legend{display:flex; gap:16px; padding:0 16px 12px; font-family:var(--mono); font-size:11px; color:var(--text2);}
-  .legend span{display:flex; align-items:center; gap:6px;}
-  .swatch{width:9px; height:9px; border-radius:3px;}
-  .divider{height:1px; background:var(--line); margin:0 16px;}
-  .speedtest{display:flex; align-items:center; gap:14px; padding:14px 16px 16px;}
-  .st-vals{display:flex; gap:20px; flex:1; flex-wrap:wrap;}
-  .st-vals .m .k{font-family:var(--mono); font-size:11px; color:var(--text3); text-transform:uppercase; letter-spacing:.08em;}
-  .st-vals .m .v{font-family:var(--mono); font-variant-numeric:tabular-nums; font-size:19px; font-weight:600;}
-  .st-vals .m .v small{font-size:11px; color:var(--text3); font-weight:500;}
-  .btn{font-family:var(--sans); font-size:13px; font-weight:550; border-radius:9px; padding:9px 14px; cursor:pointer; border:1px solid var(--line2); background:var(--elev); color:var(--text); transition:.15s; white-space:nowrap;}
-  .btn:hover{background:var(--elev2); border-color:var(--text3);}
-  .btn.primary{background:var(--accent); color:var(--accent-ink); border-color:transparent; font-weight:600;}
-  .btn.primary:hover{filter:brightness(1.06);}
-  .btn.sm{padding:6px 10px; font-size:12px;}
-  .btn:disabled{opacity:.6; cursor:default;}
+  .rows{border-top:1px solid var(--line);}
+  .row{display:flex;align-items:center;justify-content:space-between;padding:15px 2px;border-bottom:1px solid var(--line);gap:16px;}
+  .row .k{font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--mut);}
+  .row .v{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:14px;color:#fff;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:60%}
+  .row .v.dim{color:var(--faint)}
 
-  .users-head{display:flex;align-items:center;justify-content:space-between;padding:14px 16px 8px;}
-  .u-count{font-family:var(--mono);font-size:11px;color:var(--text3);}
-  .user-list{padding:4px 8px 8px; max-height:330px; overflow-y:auto;}
-  .empty{padding:26px 16px;text-align:center;color:var(--text3);font-family:var(--mono);font-size:12px;}
-  .user{display:grid; grid-template-columns:auto 1fr auto; gap:12px; align-items:center; padding:10px 8px; border-radius:10px; transition:.12s;}
-  .user:hover{background:var(--elev);}
-  .user.off{opacity:.5;}
-  .off-badge{color:var(--warn);border:1px solid color-mix(in srgb,var(--warn) 40%,transparent);border-radius:5px;padding:0 5px;font-size:10px;}
-  .u-ava{width:34px;height:34px;border-radius:9px;background:var(--elev2);border:1px solid var(--line);display:grid;place-items:center;color:var(--text2);font-family:var(--mono);font-size:13px;font-weight:600;position:relative;flex:none;}
-  .u-ava .s{position:absolute;right:-2px;bottom:-2px;width:10px;height:10px;border-radius:50%;border:2px solid var(--bg2);background:var(--text3);}
-  .u-ava .s.on{background:var(--accent);}
-  .u-main{min-width:0;}
-  .u-name{font-size:13.5px;font-weight:550;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-  .u-meta{font-family:var(--mono);font-size:11px;color:var(--text3);display:flex;gap:8px;margin-top:2px;}
-  .u-meta .data{color:var(--text2);}
-  .u-actions{display:flex;gap:5px;opacity:.55;transition:.12s;}
-  .user:hover .u-actions{opacity:1;}
-  .u-actions button{width:30px;height:30px;border-radius:8px;border:1px solid transparent;background:transparent;color:var(--text2);cursor:pointer;display:grid;place-items:center;transition:.12s;}
-  .u-actions button:hover{background:var(--elev2);border-color:var(--line);color:var(--text);}
-  .u-actions button.danger:hover{color:var(--crit);border-color:color-mix(in srgb,var(--crit) 40%,transparent);}
-  .add-row{padding:8px;border-top:1px solid var(--line);}
-  .add-row .btn{width:100%; display:flex; align-items:center; justify-content:center; gap:8px;}
+  .cluster{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:1px;background:var(--line);border:1px solid var(--line);margin-bottom:26px;}
+  .cell{background:#000;padding:20px;}
+  .cell .k{font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--mut);}
+  .cell .n{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:30px;font-weight:300;margin-top:12px;letter-spacing:-.01em;}
+  .cell .n small{font-size:13px;color:var(--faint);}
+  .cell .sub{font-family:var(--mono);font-size:10.5px;color:var(--faint);margin-top:8px;}
 
-  .overlay{position:fixed;inset:0;background:rgba(6,9,13,.62);backdrop-filter:blur(4px);display:none;place-items:center;z-index:50;padding:20px;}
-  .overlay.open{display:grid;}
-  .modal{width:min(420px,100%);background:var(--bg2);border:1px solid var(--line2);border-radius:18px;box-shadow:0 30px 80px -30px rgba(0,0,0,.7);overflow:hidden;animation:rise .28s cubic-bezier(.2,.7,.2,1);}
-  @keyframes rise{from{opacity:0;transform:translateY(14px) scale(.98)}to{opacity:1;transform:none}}
-  .modal-head{display:flex;align-items:center;justify-content:space-between;padding:16px 18px 12px;}
-  .modal-head h3{margin:0;font-size:15px;font-weight:600;}
-  .modal-body{padding:4px 18px 20px;display:flex;flex-direction:column;align-items:center;gap:14px;}
-  .qr-box{background:#fff;padding:14px;border-radius:14px;border:1px solid var(--line);}
-  .qr-box canvas,.qr-box img{display:block;width:200px;height:200px;image-rendering:pixelated;}
-  .qr-name{font-size:14px;font-weight:600;text-align:center;}
-  .qr-name span{display:block;font-family:var(--mono);font-size:11px;color:var(--text3);font-weight:400;margin-top:2px;}
-  .link-row{width:100%;display:flex;gap:8px;background:var(--elev);border:1px solid var(--line);border-radius:10px;padding:8px 8px 8px 12px;align-items:center;}
-  .link-row code{font-family:var(--mono);font-size:11.5px;color:var(--text2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1;}
-  .modal-actions{display:flex;gap:8px;width:100%;}
-  .modal-actions .btn{flex:1;text-align:center;}
-  .hint{font-family:var(--mono);font-size:11px;color:var(--text3);text-align:center;}
-  .form-col{display:flex;flex-direction:column;gap:6px;width:100%;}
-  label.lbl2{font-family:var(--mono);font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:.08em;}
-  .field{width:100%;background:var(--elev);border:1px solid var(--line);border-radius:10px;padding:10px 12px;color:var(--text);font-family:var(--sans);font-size:14px;outline:none;transition:.15s;}
-  .field:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft);}
-  .err{color:var(--crit);font-family:var(--mono);font-size:12px;min-height:16px;text-align:center;}
+  .status-line{display:flex;align-items:center;gap:12px;margin-bottom:24px;}
+  .status-line .big{font-size:26px;letter-spacing:.06em;font-weight:300;}
+  .status-line .dot{width:9px;height:9px}
 
-  /* login */
-  .login-card{width:min(360px,100%);background:var(--bg2);border:1px solid var(--line2);border-radius:18px;padding:26px 24px 24px;box-shadow:0 30px 80px -30px rgba(0,0,0,.7);}
-  .login-card .mark{width:44px;height:44px;border-radius:12px;margin:0 auto 14px;}
-  .login-card h2{text-align:center;margin:0 0 4px;font-size:17px;}
-  .login-card p{text-align:center;margin:0 0 20px;color:var(--text3);font-family:var(--mono);font-size:12px;}
+  .btn{background:transparent;border:1px solid var(--line2);color:#fff;text-transform:uppercase;letter-spacing:.14em;font-size:11px;padding:13px 20px;cursor:pointer;transition:.16s;}
+  .btn:hover{border-color:#fff;background:#0d0d0d}
+  .btn:disabled{opacity:.5;cursor:default}
+  .btn-row{display:flex;gap:10px;flex-wrap:wrap;margin-top:22px}
+  .full{width:100%}
 
-  @media (max-width:900px){ .stats{grid-template-columns:repeat(2,1fr);} .split{grid-template-columns:1fr;} .server-chip .reg{display:none;} }
-  @media (max-width:520px){ .status .up{display:none;} }
-  @media (prefers-reduced-motion:reduce){ *{animation:none!important; transition:none!important;} }
+  canvas{display:block;width:100%}
+  .chart-box{border:1px solid var(--line);padding:14px;}
+  .legend{display:flex;gap:22px;margin-top:14px;font-family:var(--mono);font-size:11px;color:var(--mut);}
+  .legend i{display:inline-block;width:14px;height:0;border-top:1.5px solid #fff;vertical-align:middle;margin-right:7px}
+  .legend i.dash{border-top-style:dashed}
+
+  .u-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+  .u-top .c{font-family:var(--mono);font-size:11px;color:var(--faint);letter-spacing:.1em}
+  .ulist{border-top:1px solid var(--line)}
+  .empty{padding:24px 2px;color:var(--faint);font-family:var(--mono);font-size:12px}
+  .u{display:grid;grid-template-columns:auto 1fr auto;gap:14px;align-items:center;padding:14px 2px;border-bottom:1px solid var(--line);}
+  .u.off{opacity:.42}
+  .ava{width:34px;height:34px;border:1px solid var(--line2);display:grid;place-items:center;font-family:var(--mono);font-size:13px;position:relative}
+  .ava .s{position:absolute;right:-3px;bottom:-3px;width:9px;height:9px;border-radius:50%;background:#000;border:1px solid var(--faint)}
+  .ava .s.on{background:#fff;border-color:#fff}
+  .uname{font-size:14px}
+  .umeta{font-family:var(--mono);font-size:11px;color:var(--faint);margin-top:3px;display:flex;gap:9px;flex-wrap:wrap}
+  .umeta .d{color:var(--mut)}
+  .obadge{border:1px solid var(--line2);color:var(--mut);font-size:9.5px;letter-spacing:.1em;padding:0 5px;border-radius:2px}
+  .uacts{display:flex;gap:2px;opacity:.5;transition:.15s}
+  .u:hover .uacts{opacity:1}
+  .uacts button{width:32px;height:32px;background:none;border:1px solid transparent;color:var(--mut);cursor:pointer;display:grid;place-items:center}
+  .uacts button:hover{color:#fff;border-color:var(--line2)}
+  .uacts svg{width:15px;height:15px;fill:none;stroke:currentColor;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
+
+  .logbox{background:#050505;border:1px solid var(--line);height:360px;overflow-y:auto;padding:14px 16px;font-family:var(--mono);font-size:12px;line-height:1.7}
+  .logbox .ln{white-space:pre-wrap;color:#bdbdbd;word-break:break-word}
+  .logbox .ln .tt{color:var(--faint)}
+  .cursor{display:inline-block;width:8px;height:14px;background:#fff;animation:bl 1.1s steps(1) infinite;vertical-align:-2px}
+  @keyframes bl{50%{opacity:0}}
+
+  .ov{position:fixed;inset:0;background:rgba(0,0,0,.72);display:none;place-items:center;z-index:50;padding:20px}
+  .ov.open{display:grid}
+  .modal{width:min(400px,100%);background:#000;border:1px solid var(--line2);animation:ri .25s ease}
+  @keyframes ri{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+  .mhead{display:flex;align-items:center;justify-content:space-between;padding:18px 20px;border-bottom:1px solid var(--line)}
+  .mhead .t{font-size:12px;letter-spacing:.16em;text-transform:uppercase}
+  .mhead button{background:none;border:none;color:var(--mut);cursor:pointer}
+  .mbody{padding:22px 20px;display:flex;flex-direction:column;gap:16px;align-items:center}
+  .qr{background:#fff;padding:12px}
+  .qr canvas,.qr img{width:184px;height:184px;image-rendering:pixelated;display:block}
+  .field{width:100%;background:#0a0a0a;border:1px solid var(--line2);color:#fff;padding:11px 13px;font-family:inherit;font-size:14px;outline:none}
+  .field:focus{border-color:#fff}
+  .flabel{width:100%;font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--mut);margin-bottom:-8px}
+  .linkrow{width:100%;display:flex;gap:8px;border:1px solid var(--line);padding:9px 9px 9px 12px;align-items:center}
+  .linkrow code{font-family:var(--mono);font-size:11px;color:var(--mut);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1}
+  .hint{font-family:var(--mono);font-size:10.5px;color:var(--faint);text-align:center;line-height:1.6}
+  .err{color:#fff;font-family:var(--mono);font-size:11px;min-height:15px;text-align:center}
+
+  .login-box{width:min(340px,100%);border:1px solid var(--line2);background:#000;padding:34px 28px}
+  .login-box .word{text-align:center;font-size:20px;letter-spacing:.34em;margin-bottom:6px}
+  .login-box .cap{text-align:center;font-family:var(--mono);font-size:11px;color:var(--faint);letter-spacing:.14em;margin-bottom:26px}
+
+  @media (max-width:820px){ .grid{grid-template-columns:repeat(2,1fr)} }
+  @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 </style>
 </head>
 <body>
 
+<div class="wrap">
+  <div class="top">
+    <button class="back" id="back"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6l-6 6 6 6"/></svg>НАЗАД</button>
+    <div class="word">BEACON</div>
+    <div class="sp"></div>
+    <div class="stat" id="topStat"><span class="dot"></span><span id="topHost">В СЕТИ</span></div>
+  </div>
+
+  <div id="home"><div class="grid" id="grid"></div></div>
+
+  <div class="section" id="section">
+    <div class="sec-head"><div class="t" id="secTitle">—</div><div class="idx" id="secIdx"></div></div>
+    <div class="sec-body" id="secBody"></div>
+  </div>
+</div>
+
 <!-- LOGIN -->
-<div class="overlay" id="login">
-  <div class="login-card">
-    <div class="mark" aria-hidden="true">
-      <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="18" r="2.4" fill="var(--accent)"/><path d="M7.4 13.6a6.5 6.5 0 0 1 9.2 0" stroke="var(--accent)" stroke-width="2" stroke-linecap="round"/><path d="M4.2 10.4a11 11 0 0 1 15.6 0" stroke="var(--accent)" stroke-width="2" stroke-linecap="round" opacity=".55"/></svg>
-    </div>
-    <h2>beacon</h2>
-    <p>вход в панель</p>
-    <form id="loginForm" class="form-col" style="gap:12px">
-      <input class="field" id="pw" type="password" placeholder="Пароль панели" autocomplete="current-password" autofocus>
+<div class="ov" id="loginOv">
+  <div class="login-box">
+    <div class="word up">BEACON</div>
+    <div class="cap">ВХОД В ПАНЕЛЬ</div>
+    <form id="loginForm" style="display:flex;flex-direction:column;gap:14px">
+      <input class="field" id="pw" type="password" placeholder="Пароль" autocomplete="current-password" autofocus>
       <div class="err" id="loginErr"></div>
-      <button class="btn primary" type="submit" style="width:100%;justify-content:center">Войти</button>
+      <button class="btn full" type="submit">ВОЙТИ</button>
     </form>
   </div>
 </div>
 
-<!-- APP -->
-<div class="app hidden" id="app">
-  <header class="topbar">
-    <div class="brand">
-      <div class="mark" aria-hidden="true"><svg width="18" height="18" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="18" r="2.4" fill="var(--accent)"/><path d="M7.4 13.6a6.5 6.5 0 0 1 9.2 0" stroke="var(--accent)" stroke-width="2" stroke-linecap="round"/><path d="M4.2 10.4a11 11 0 0 1 15.6 0" stroke="var(--accent)" stroke-width="2" stroke-linecap="round" opacity=".55"/></svg></div>
-      <div><h1>beacon</h1><div class="sub">vless · reality</div></div>
-    </div>
-    <div class="server-chip"><span class="reg" id="regName">сервер</span><b id="hostName">—</b></div>
-    <div class="spacer"></div>
-    <div class="status"><span class="dot" id="statusDot" aria-hidden="true"></span><span id="statusText">В сети</span><span class="up" id="uptime" style="color:var(--text3);font-family:var(--mono);font-size:12px;"></span></div>
-    <button class="icon-btn" id="themeBtn" title="Тема" aria-label="Тема"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg></button>
-    <button class="icon-btn" id="logoutBtn" title="Выйти" aria-label="Выйти"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/></svg></button>
-  </header>
-
-  <section class="stats">
-    <div class="tile">
-      <div class="lbl"><span class="eyebrow">CPU</span></div>
-      <div class="val" id="cpuVal">0<small>%</small></div>
-      <div class="meter"><i id="cpuBar" style="width:0%"></i></div>
-      <div class="foot" id="loadFoot">load — · — · —</div>
-    </div>
-    <div class="tile">
-      <div class="lbl"><span class="eyebrow">RAM</span></div>
-      <div class="val" id="ramVal">0<small>ГБ</small></div>
-      <div class="meter warn"><i id="ramBar" style="width:0%"></i></div>
-      <div class="foot" id="ramFoot">—</div>
-    </div>
-    <div class="tile">
-      <div class="lbl"><span class="eyebrow">Трафик</span></div>
-      <div class="updown"><div class="u"><span class="arrow dn">↓</span><span class="val" style="font-size:20px" id="dnVal">0</span><small style="font-family:var(--mono);color:var(--text3);font-size:11px">Mbps</small></div></div>
-      <div class="updown" style="margin-top:4px"><div class="u"><span class="arrow up">↑</span><span class="val" style="font-size:20px" id="upVal">0</span><small style="font-family:var(--mono);color:var(--text3);font-size:11px">Mbps</small></div></div>
-    </div>
-    <div class="tile">
-      <div class="lbl"><span class="eyebrow">Клиенты</span></div>
-      <div class="val" id="clientsVal">0<small>онлайн</small></div>
-      <div class="foot" id="clientsFoot" style="margin-top:14px">— ключей</div>
-    </div>
-    <div class="tile">
-      <div class="lbl"><span class="eyebrow">Аптайм</span></div>
-      <div class="val" id="uptimeVal" style="font-size:20px">—</div>
-      <div class="foot" style="margin-top:14px">с запуска ОС</div>
-    </div>
-  </section>
-
-  <section class="split">
-    <div class="panel">
-      <div class="panel-head"><h2>Трафик в реальном времени</h2><span class="eyebrow">60 сек</span></div>
-      <div class="chart-wrap"><canvas class="chart" id="traffic"></canvas></div>
-      <div class="legend">
-        <span><i class="swatch" style="background:var(--accent)"></i> Загрузка</span>
-        <span><i class="swatch" style="background:var(--warn)"></i> Отдача</span>
-      </div>
-      <div class="divider"></div>
-      <div class="speedtest">
-        <div class="st-vals">
-          <div class="m"><div class="k">Down</div><div class="v" id="stDn">—<small> Mbps</small></div></div>
-          <div class="m"><div class="k">Up</div><div class="v" id="stUp">—<small> Mbps</small></div></div>
-          <div class="m"><div class="k">Ping</div><div class="v" id="stPing">—<small> ms</small></div></div>
-        </div>
-        <button class="btn" id="stBtn">Запустить тест</button>
-      </div>
-    </div>
-
-    <div class="panel">
-      <div class="users-head"><h2 style="font-size:13px;margin:0;font-weight:600;">Пользователи</h2><span class="u-count" id="uCount">—</span></div>
-      <div class="user-list" id="userList"></div>
-      <div class="add-row">
-        <button class="btn primary" id="addBtn"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg> Добавить пользователя</button>
-      </div>
-    </div>
-  </section>
-</div>
-
-<!-- ADD USER MODAL -->
-<div class="overlay" id="addOverlay">
+<!-- QR -->
+<div class="ov" id="qrOv">
   <div class="modal">
-    <div class="modal-head"><h3 id="addTitle">Новый ключ</h3><button class="icon-btn" data-close="addOverlay" aria-label="Закрыть"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
-    <div class="modal-body" style="align-items:stretch">
-      <div class="form-col"><label class="lbl2" for="uName">Имя</label><input class="field" id="uName" placeholder="Например: Артём"></div>
-      <div class="form-col"><label class="lbl2" for="uDevice">Устройство / заметка</label><input class="field" id="uDevice" placeholder="iPhone, ноутбук…"></div>
-      <button class="btn primary" id="createBtn" style="width:100%;justify-content:center">Создать ключ</button>
+    <div class="mhead"><div class="t" id="qrTitle">КЛЮЧ</div><button data-close="qrOv"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
+    <div class="mbody">
+      <div class="qr"><img id="qrImg" alt="QR" class="hidden"><canvas id="qrC" width="184" height="184"></canvas></div>
+      <div class="linkrow"><code id="qrLink">vless://…</code><button class="btn" style="padding:8px 12px" id="qrCopy">КОПИЯ</button></div>
+      <div class="hint">СКАНИРУЙ В v2rayNG / STREISAND / HIDDIFY</div>
     </div>
   </div>
 </div>
 
-<!-- QR MODAL -->
-<div class="overlay" id="qrOverlay">
-  <div class="modal" role="dialog" aria-modal="true" aria-label="Ключ пользователя">
-    <div class="modal-head"><h3>Ключ готов</h3><button class="icon-btn" data-close="qrOverlay" aria-label="Закрыть"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
-    <div class="modal-body">
-      <div class="qr-box"><img id="qrImg" alt="QR" class="hidden"><canvas id="qrCanvas" width="200" height="200"></canvas></div>
-      <div class="qr-name" id="qrName">—<span></span></div>
-      <div class="link-row"><code id="qrLink">—</code><button class="btn sm" id="copyBtn">Копировать</button></div>
-      <div class="modal-actions"><button class="btn" id="dlBtn">Скачать .png</button><button class="btn primary" id="openAppBtn">Открыть в приложении</button></div>
-      <div class="hint">Отсканируй QR в v2rayNG / Streisand / Hiddify — подключение за секунды</div>
+<!-- ADD / EDIT -->
+<div class="ov" id="addOv">
+  <div class="modal">
+    <div class="mhead"><div class="t" id="addTitle">НОВЫЙ КЛЮЧ</div><button data-close="addOv"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
+    <div class="mbody" style="align-items:stretch">
+      <div class="flabel">Имя</div><input class="field" id="fName" placeholder="Например: Артём">
+      <div class="flabel">Устройство</div><input class="field" id="fDev" placeholder="iPhone, ноутбук…">
+      <button class="btn full" id="fSave" style="margin-top:6px">СОЗДАТЬ КЛЮЧ</button>
+    </div>
+  </div>
+</div>
+
+<!-- PASSWORD -->
+<div class="ov" id="pwOv">
+  <div class="modal">
+    <div class="mhead"><div class="t">СМЕНА ПАРОЛЯ</div><button data-close="pwOv"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
+    <div class="mbody" style="align-items:stretch">
+      <div class="flabel">Новый пароль (мин. 6)</div><input class="field" id="npw" type="password" placeholder="••••••">
+      <div class="err" id="pwErr"></div>
+      <button class="btn full" id="pwSave">СОХРАНИТЬ</button>
     </div>
   </div>
 </div>
 
 <script>
 (() => {
-  const $ = s => document.querySelector(s);
-  const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
-  const css = v => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
-  const state = { demo:false, users:[], curLink:'', curId:'', editingId:null };
+  const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
+  const reduce=matchMedia('(prefers-reduced-motion:reduce)').matches;
+  const GB=1024**3;
+  const state={demo:false,users:[],editing:null,curLink:'',curId:'',metricsES:null,logsES:null,demoTimer:null,logTimer:null};
+  let INFO={};
+  const M={cpu:0,ram:0,ramT:0,dn:0,up:0,uptSec:0,load1:0};
+  const dnArr=[],upArr=[],MAX=60; for(let i=0;i<MAX;i++){dnArr.push(0);upArr.push(0);}
 
   /* ---------- API ---------- */
-  const API = {
-    async session(){ const r = await fetch('/api/session'); return r.ok ? (await r.json()).authenticated : false; },
-    async login(pw){ const r = await fetch('/api/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({password:pw})}); return r.ok; },
-    async logout(){ await fetch('/api/logout',{method:'POST'}); },
-    async users(){ const r = await fetch('/api/users'); return r.ok ? r.json() : []; },
-    async add(name,device){ const r = await fetch('/api/users',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name,device})}); return r.ok ? r.json() : null; },
-    async update(id,patch){ const r = await fetch('/api/users/'+encodeURIComponent(id),{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify(patch)}); return r.ok ? r.json() : null; },
-    async del(id){ return fetch('/api/users/'+encodeURIComponent(id),{method:'DELETE'}); },
+  const j=r=>r.ok?r.json():null;
+  const API={
+    async session(){const r=await fetch('/api/session');return r.ok?(await r.json()).authenticated:false;},
+    async login(pw){const r=await fetch('/api/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({password:pw})});return r.ok;},
+    async logout(){await fetch('/api/logout',{method:'POST'});},
+    async users(){return (await fetch('/api/users').then(j))||[];},
+    async add(name,device){return fetch('/api/users',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name,device})}).then(j);},
+    async update(id,patch){return fetch('/api/users/'+encodeURIComponent(id),{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify(patch)}).then(j);},
+    async del(id){return fetch('/api/users/'+encodeURIComponent(id),{method:'DELETE'});},
+    async info(){return (await fetch('/api/info').then(j))||{};},
+    async password(pw){return fetch('/api/password',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({password:pw})});},
   };
 
-  /* ---------- theme ---------- */
-  $('#themeBtn').addEventListener('click', () => {
-    const root = document.documentElement;
-    const cur = root.getAttribute('data-theme') || (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark':'light');
-    root.setAttribute('data-theme', cur === 'dark' ? 'light':'dark');
-  });
+  /* ---------- format ---------- */
+  const esc=s=>(s==null?'':(''+s)).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+  const fmtB=b=>{if(!b)return'0 Б';const u=['Б','КБ','МБ','ГБ','ТБ'];let i=0,n=b;while(n>=1024&&i<4){n/=1024;i++}return (i?n.toFixed(1):n)+' '+u[i]};
+  const fmtMbps=v=>v<10?v.toFixed(1):Math.round(v);
+  const fmtUpt=s=>{if(!s)return'—';const d=Math.floor(s/86400),h=Math.floor(s%86400/3600);return (d?d+'д ':'')+String(h).padStart(2,'0')+'ч'};
+  const ago=iso=>{if(!iso)return'не подключался';const t=new Date(iso).getTime();if(!t||new Date(iso).getFullYear()<2000)return'—';const s=(Date.now()-t)/1000;if(s<60)return Math.round(s)+' сек назад';if(s<3600)return Math.round(s/60)+' мин назад';if(s<86400)return Math.round(s/3600)+' ч назад';return Math.round(s/86400)+' дн назад'};
+  const rows=arr=>`<div class="rows">${arr.map(([k,v,dim])=>`<div class="row"><span class="k">${k}</span><span class="v ${dim?'dim':''}">${v}</span></div>`).join('')}</div>`;
+  const onlineN=()=>state.users.filter(u=>u.online).length;
+  const trunc=(s,n)=>!s?'—':(s.length>n?s.slice(0,n-1)+'…':s);
 
-  /* ---------- format helpers ---------- */
-  const GB = 1024**3;
-  const fmtGB = b => (b/GB).toFixed(1);
-  const fmtMbps = bps => { const m = bps*8/1e6; return m<10 ? m.toFixed(1) : Math.round(m); };
-  function fmtBytes(b){ if(!b) return '0 Б'; const u=['Б','КБ','МБ','ГБ','ТБ']; let i=0,n=b; while(n>=1024&&i<u.length-1){n/=1024;i++;} return (i?n.toFixed(1):n)+' '+u[i]; }
-  function fmtUptime(sec){ if(!sec) return '—'; const d=Math.floor(sec/86400), h=Math.floor(sec%86400/3600); return (d?d+'д ':'')+String(h).padStart(2,'0')+'ч'; }
-  function ago(iso){ if(!iso) return 'не подключался'; const t=new Date(iso).getTime(); if(!t) return '—'; const s=(Date.now()-t)/1000; if(s<60) return Math.round(s)+' сек назад'; if(s<3600) return Math.round(s/60)+' мин назад'; if(s<86400) return Math.round(s/3600)+' ч назад'; return Math.round(s/86400)+' дн назад'; }
-  const initial = n => (n||'?').trim().charAt(0).toUpperCase();
+  /* ---------- icons + tiles ---------- */
+  const ic={
+    connection:'<path d="M9.5 14.5l5-5"/><path d="M12 6.5l1-1a3.5 3.5 0 0 1 5 5l-1 1"/><path d="M12 17.5l-1 1a3.5 3.5 0 0 1-5-5l1-1"/>',
+    speed:'<path d="M4 16a8 8 0 0 1 16 0"/><path d="M12 16l4.5-3.2"/><circle cx="12" cy="16" r="1.1"/>',
+    bandwidth:'<path d="M8 20V5"/><path d="M4.5 8.5L8 5l3.5 3.5"/><path d="M16 4v15"/><path d="M12.5 15.5L16 19l3.5-3.5"/>',
+    usage:'<circle cx="12" cy="12" r="8"/><path d="M12 12V4"/><path d="M12 12l6.5 3.4"/>',
+    users:'<circle cx="9" cy="8.5" r="3"/><path d="M3.5 19a5.5 5.5 0 0 1 11 0"/><path d="M16 6.2a3 3 0 0 1 0 5.6"/><path d="M17.5 13.5a5.5 5.5 0 0 1 3 5"/>',
+    servers:'<rect x="4" y="4" width="16" height="5" rx="1"/><rect x="4" y="11" width="16" height="5" rx="1"/><circle cx="7.5" cy="6.5" r=".6"/><circle cx="7.5" cy="13.5" r=".6"/><path d="M11 18.5h9"/>',
+    ipdns:'<circle cx="12" cy="12" r="8.5"/><path d="M3.5 12h17"/><path d="M12 3.5c2.8 2.5 2.8 14.5 0 17M12 3.5c-2.8 2.5-2.8 14.5 0 17"/>',
+    security:'<path d="M12 3.5l7 2.6v5.1c0 4.2-3 7-7 8.8-4-1.8-7-4.6-7-8.8V6.1z"/><path d="M9.3 12l1.9 1.9 3.5-3.8"/>',
+    analytics:'<path d="M4 4v16h16"/><path d="M7.5 14.5l3.2-3.4 3 2 4-5"/><circle cx="7.5" cy="14.5" r=".8"/><circle cx="17.7" cy="8.1" r=".8"/>',
+    logs:'<rect x="3.5" y="4.5" width="17" height="15" rx="2"/><path d="M7.5 10l3 2.5-3 2.5"/><path d="M12.5 15h4.5"/>',
+    settings:'<path d="M4 8h9"/><path d="M17 8h3"/><circle cx="15" cy="8" r="2.1"/><path d="M4 16h4"/><path d="M12 16h8"/><circle cx="10" cy="16" r="2.1"/>',
+    about:'<circle cx="12" cy="12" r="8.5"/><path d="M12 11v5.2"/><circle cx="12" cy="7.8" r=".7" fill="currentColor" stroke="none"/>',
+  };
+  const tiles=[['connection','CONNECTION'],['speed','SPEED'],['bandwidth','BANDWIDTH'],['usage','USAGE'],['users','USERS'],['servers','SERVERS'],['ipdns','IP & DNS'],['security','SECURITY'],['analytics','ANALYTICS'],['logs','LOGS'],['settings','SETTINGS'],['about','ABOUT']];
+  $('#grid').innerHTML=tiles.map(([k,l])=>`<button class="tile" data-k="${k}"><svg viewBox="0 0 24 24">${ic[k]}</svg><span class="lbl">${l}</span></button>`).join('');
+  $$('.tile').forEach(t=>t.addEventListener('click',()=>openSection(t.dataset.k)));
 
-  /* ---------- metrics apply ---------- */
-  const dn=[], up=[], MAX=60;
-  for(let i=0;i<MAX;i++){ dn.push(0); up.push(0); }
-  function applyMetrics(m){
-    const cpu = Math.round(m.cpu||0);
-    $('#cpuVal').innerHTML = cpu+'<small>%</small>';
-    $('#cpuBar').style.width = cpu+'%';
-    $('#loadFoot').textContent = `load ${(m.load1||0).toFixed(2)} · ${(m.load5||0).toFixed(2)} · ${(m.load15||0).toFixed(2)}`;
-
-    if(m.mem_total){
-      const pct = Math.round(m.mem_used/m.mem_total*100);
-      $('#ramVal').innerHTML = fmtGB(m.mem_used)+'<small>/ '+fmtGB(m.mem_total)+' ГБ</small>';
-      $('#ramBar').style.width = pct+'%';
-      $('#ramFoot').textContent = pct+'% занято';
-    }
-    const d = fmtMbps(m.net_rx_bps||0), u = fmtMbps(m.net_tx_bps||0);
-    $('#dnVal').textContent = d; $('#upVal').textContent = u;
-    dn.push(+d); dn.shift(); up.push(+u); up.shift();
-    $('#uptimeVal').textContent = fmtUptime(m.uptime_sec);
-    $('#uptime').textContent = m.uptime_sec ? '· аптайм '+fmtUptime(m.uptime_sec) : '';
-    draw();
+  /* ---------- router ---------- */
+  let current=null;
+  function stopLive(){ if(state.logsES){state.logsES.close();state.logsES=null;} if(state.logTimer){clearInterval(state.logTimer);state.logTimer=null;} }
+  function openSection(k){
+    stopLive(); current=k;
+    const idx=tiles.findIndex(t=>t[0]===k)+1;
+    $('#secTitle').textContent=tiles.find(t=>t[0]===k)[1];
+    $('#secIdx').textContent=String(idx).padStart(2,'0')+' / 12';
+    $('#secBody').innerHTML=render[k]?render[k]():'<p class="lede">Раздел в разработке.</p>';
+    $('#home').style.display='none'; $('#section').style.display='block'; $('#back').style.display='flex';
+    window.scrollTo(0,0);
+    if(after[k])after[k]();
   }
+  function goHome(){ stopLive(); current=null; $('#section').style.display='none'; $('#home').style.display='block'; $('#back').style.display='none'; }
+  $('#back').addEventListener('click',goHome);
 
-  /* ---------- users render ---------- */
-  const icon = p => `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${p}</svg>`;
-  function renderUsers(list){
-    state.users = list;
-    const online = list.filter(u=>u.online).length;
-    $('#clientsVal').innerHTML = online+'<small>/ '+list.length+' онлайн</small>';
-    $('#clientsFoot').textContent = list.length+' ключей';
-    $('#uCount').textContent = list.length+' ключей';
-    const el = $('#userList');
-    if(!list.length){ el.innerHTML = '<div class="empty">Пока нет ключей. Нажми «Добавить пользователя».</div>'; return; }
-    el.innerHTML = list.map(u => `
-      <div class="user ${u.enabled===false?'off':''}" data-id="${u.id}">
-        <div class="u-ava">${initial(u.name)}<span class="s ${u.online?'on':''}"></span></div>
-        <div class="u-main">
-          <div class="u-name">${escapeHtml(u.name)}</div>
-          <div class="u-meta"><span>${escapeHtml(u.device||'—')}</span><span class="data">${fmtBytes((u.bytes_up||0)+(u.bytes_down||0))}</span><span>· ${ago(u.last_seen)}</span>${u.enabled===false?'<span class="off-badge">выкл</span>':''}</div>
+  /* ---------- sections ---------- */
+  const render={
+    connection:()=>`
+      <div class="status-line"><span class="dot" style="width:9px;height:9px"></span><span class="big">В СЕТИ</span></div>
+      <p class="lede">Сервер ${esc(INFO.host||'—')} принимает подключения. Протокол VLESS + Reality, маскировка под ${esc(INFO.sni||'—')}.</p>
+      ${rows([['Аптайм','<span id="r-upt">'+fmtUpt(M.uptSec)+'</span>'],['Активных клиентов','<span id="r-cl">'+onlineN()+' / '+state.users.length+'</span>'],['Внешний адрес',esc(INFO.host||'—')+':'+(INFO.vpn_port||443)],['TLS панели',esc(INFO.tls||'self-signed')]])}
+      <div class="cluster" style="margin-top:26px">
+        <div class="cell"><div class="k">CPU</div><div class="n" id="r-cpu">${Math.round(M.cpu)}<small>%</small></div><div class="sub">load ${(M.load1||0).toFixed(2)}</div></div>
+        <div class="cell"><div class="k">RAM</div><div class="n" id="r-ram">${M.ramT?M.ram.toFixed(1):'0'}<small>/${(M.ramT||0).toFixed(1)} ГБ</small></div></div>
+        <div class="cell"><div class="k">↓ загрузка</div><div class="n" id="r-dn">${fmtMbps(M.dn)}<small>Mbps</small></div></div>
+        <div class="cell"><div class="k">↑ отдача</div><div class="n" id="r-up">${fmtMbps(M.up)}<small>Mbps</small></div></div>
+      </div>`,
+    speed:()=>`
+      <p class="lede">Ориентировочная пропускная способность. Полноценный серверный спидтест — в планах.</p>
+      <div class="cluster">
+        <div class="cell"><div class="k">Download</div><div class="n" id="s-dn">—<small>Mbps</small></div></div>
+        <div class="cell"><div class="k">Upload</div><div class="n" id="s-up">—<small>Mbps</small></div></div>
+        <div class="cell"><div class="k">Ping</div><div class="n" id="s-pg">—<small>ms</small></div></div>
+      </div>
+      <div class="btn-row"><button class="btn" id="s-run">ЗАПУСТИТЬ ТЕСТ</button></div>`,
+    bandwidth:()=>`
+      <p class="lede">Трафик сервера в реальном времени, последние 60 секунд.</p>
+      <div class="chart-box"><canvas id="bwC" height="150"></canvas></div>
+      <div class="legend"><span><i></i>ЗАГРУЗКА <span class="mono" id="bw-dn" style="color:#fff">${fmtMbps(M.dn)}</span></span><span><i class="dash"></i>ОТДАЧА <span class="mono" id="bw-up" style="color:#fff">${fmtMbps(M.up)}</span></span></div>`,
+    usage:()=>{
+      const tot=state.users.reduce((a,u)=>a+(u.bytes_up||0)+(u.bytes_down||0),0);
+      const top=state.users.slice().sort((a,b)=>((b.bytes_up||0)+(b.bytes_down||0))-((a.bytes_up||0)+(a.bytes_down||0)));
+      return `<p class="lede">Суммарный трафик по всем ключам.</p>
+        ${rows([['Всего трафика',fmtB(tot)],['Активных ключей',state.users.length],['Онлайн сейчас',onlineN()]])}
+        <div class="u-top" style="margin-top:26px"><span class="k up" style="font-size:11px;color:var(--mut)">Топ по трафику</span></div>
+        ${top.length?rows(top.map(u=>[esc(u.name),fmtB((u.bytes_up||0)+(u.bytes_down||0))])):'<div class="empty">Пока нет данных.</div>'}`;
+    },
+    users:()=>`
+      <div class="u-top"><span class="k up" style="font-size:11px;color:var(--mut)">Ключи доступа</span><span class="c">${state.users.length} КЛЮЧЕЙ</span></div>
+      <div class="ulist" id="ulist"></div>
+      <div class="btn-row"><button class="btn full" id="u-add">+ ДОБАВИТЬ ПОЛЬЗОВАТЕЛЯ</button></div>`,
+    servers:()=>`
+      <p class="lede">Управляемые узлы. Сейчас подключён один сервер.</p>
+      <div class="cluster" style="grid-template-columns:1fr">
+        <div class="cell" style="display:flex;justify-content:space-between;align-items:center">
+          <div><div style="font-size:16px;letter-spacing:.06em">${esc(INFO.host||'—')}</div><div class="sub" style="margin-top:6px">VLESS · REALITY</div></div>
+          <div class="stat" style="color:var(--mut);font-size:11px"><span class="dot"></span>В СЕТИ</div>
         </div>
-        <div class="u-actions">
-          <button data-act="qr" title="QR / ссылка">${icon('<rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><path d="M14 14h3v3M20 14v.01M14 20v.01M20 20v.01M17 20h.01"/>')}</button>
-          <button data-act="edit" title="Переименовать">${icon('<path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z"/>')}</button>
-          <button data-act="toggle" title="${u.enabled===false?'Включить':'Выключить'}">${icon('<path d="M12 3v9"/><path d="M6.4 6.4a8 8 0 1 0 11.2 0"/>')}</button>
-          <button data-act="copy" title="Копировать ссылку">${icon('<rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/>')}</button>
-          <button data-act="del" class="danger" title="Удалить">${icon('<path d="M4 7h16M9 7V5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2M6 7l1 13a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-13"/>')}</button>
+      </div>
+      ${rows([['Внешний IP',esc(INFO.host||'—')],['Порт VPN',(INFO.vpn_port||443)+' / tcp'],['Порт панели',esc((INFO.listen||':8443'))+' / tcp'],['CPU','<span id="r-cpu">'+Math.round(M.cpu)+'</span> %'],['RAM',(M.ramT?M.ram.toFixed(1):'0')+' / '+(M.ramT||0).toFixed(1)+' ГБ'],['Аптайм','<span id="r-upt">'+fmtUpt(M.uptSec)+'</span>']])}`,
+    ipdns:()=>`
+      <p class="lede">Сетевые параметры сервера и маскировки Reality.</p>
+      ${rows([['Внешний IP',esc(INFO.host||'—')],['Порт',INFO.vpn_port||443],['Маскировка (SNI)',esc(INFO.sni||'—')],['Reality dest',esc(INFO.dest||'—')],['Fingerprint',esc(INFO.fingerprint||'—')],['DNS','по умолчанию системы']])}`,
+    security:()=>`
+      <p class="lede">Криптография и параметры доступа. Reality маскирует трафик под обычный HTTPS к чужому сайту.</p>
+      ${rows([['Протокол','VLESS + Reality'],['Поток','xtls-rprx-vision'],['Публичный ключ',esc(trunc(INFO.public_key,20))],['Short ID',esc((INFO.short_ids&&INFO.short_ids[0])||'—')],['TLS панели',esc(INFO.tls||'self-signed')]])}`,
+    analytics:()=>`
+      <p class="lede">Распределение трафика по ключам. Исторические графики появятся позже.</p>
+      <div class="chart-box"><canvas id="an1" height="150"></canvas></div>
+      <div class="legend"><span><i></i>ТРАФИК ПО КЛЮЧАМ</span></div>`,
+    logs:()=>`
+      <p class="lede">Живой поток журнала beacon и xray. Только чтение.</p>
+      <div class="logbox" id="logbox"></div>`,
+    settings:()=>`
+      <p class="lede">Параметры панели. Значения хранятся в /etc/beacon/config.json.</p>
+      ${rows([['Адрес панели',esc(INFO.listen||':8443')],['Порт VPN',INFO.vpn_port||443],['Маскировка',esc(INFO.sni||'—')],['Версия',esc(INFO.version||'—')]])}
+      <div class="btn-row"><button class="btn" id="st-pw">СМЕНИТЬ ПАРОЛЬ</button><button class="btn" id="st-out">ВЫЙТИ</button></div>`,
+    about:()=>`
+      <div style="padding:20px 0 6px"><div class="word up" style="font-size:24px;letter-spacing:.3em">BEACON</div></div>
+      <p class="lede">Self-hosted VPN за одну команду. VLESS + Reality, минималистичная панель.</p>
+      ${rows([['Версия',esc(INFO.version||'—')],['Движок','Xray-core'],['Протокол','VLESS + Reality'],['Лицензия','MIT']])}`,
+  };
+
+  const after={
+    users:()=>{renderUsers();$('#u-add').addEventListener('click',openAdd);},
+    bandwidth:()=>drawBW(),
+    analytics:()=>{const d=state.users.map(u=>(u.bytes_up||0)+(u.bytes_down||0));const lbl=state.users.map(u=>u.name);bars('#an1',d.length?d:[0],lbl);},
+    logs:()=>startLogs(),
+    speed:()=>$('#s-run').addEventListener('click',runSpeed),
+    settings:()=>{$('#st-pw').addEventListener('click',()=>{$('#npw').value='';$('#pwErr').textContent='';openOv('pwOv');});$('#st-out').addEventListener('click',doLogout);},
+  };
+
+  /* ---------- users ---------- */
+  const svgi=p=>`<svg viewBox="0 0 24 24">${p}</svg>`;
+  function renderUsers(){
+    const el=$('#ulist'); if(!el)return;
+    if(!state.users.length){el.innerHTML='<div class="empty">Пока нет ключей. Нажми «Добавить пользователя».</div>';return;}
+    el.innerHTML=state.users.map(u=>`
+      <div class="u ${u.enabled===false?'off':''}" data-id="${esc(u.id)}">
+        <div class="ava">${esc((u.name||'?')[0].toUpperCase())}<span class="s ${u.online?'on':''}"></span></div>
+        <div><div class="uname">${esc(u.name)}</div><div class="umeta"><span>${esc(u.device||'—')}</span><span class="d">${fmtB((u.bytes_up||0)+(u.bytes_down||0))}</span><span>· ${ago(u.last_seen)}</span>${u.enabled===false?'<span class="obadge">ВЫКЛ</span>':''}</div></div>
+        <div class="uacts">
+          <button data-a="qr" title="QR">${svgi('<rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><path d="M14 14h3v3M20 20h.01M17 20h.01M20 17h.01"/>')}</button>
+          <button data-a="edit" title="Изменить">${svgi('<path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/>')}</button>
+          <button data-a="tog" title="Вкл/выкл">${svgi('<path d="M12 3v9"/><path d="M6.4 6.4a8 8 0 1 0 11.2 0"/>')}</button>
+          <button data-a="del" title="Удалить">${svgi('<path d="M4 7h16M9 7V5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2M6 7l1 13a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-13"/>')}</button>
         </div>
       </div>`).join('');
+    el.querySelectorAll('.u').forEach(row=>{
+      const u=state.users.find(x=>x.id===row.dataset.id);
+      row.querySelectorAll('.uacts button').forEach(b=>b.addEventListener('click',()=>act(b.dataset.a,u)));
+    });
   }
-  function escapeHtml(s){ return (s||'').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+  async function act(a,u){
+    if(a==='qr')openQR(u);
+    else if(a==='edit')openEdit(u);
+    else if(a==='tog'){const en=u.enabled===false;if(state.demo){u.enabled=en;renderUsers();}else{await API.update(u.id,{enabled:en});await refreshUsers();}}
+    else if(a==='del'){if(!confirm('Удалить ключ «'+u.name+'»?'))return;if(state.demo){state.users=state.users.filter(x=>x.id!==u.id);renderUsers();}else{await API.del(u.id);await refreshUsers();}}
+  }
+  async function refreshUsers(){ if(!state.demo)state.users=await API.users(); if(current==='users')renderUsers(); }
 
-  $('#userList').addEventListener('click', async e => {
-    const btn = e.target.closest('button[data-act]'); if(!btn) return;
-    const id = btn.closest('.user').dataset.id;
-    const u = state.users.find(x=>x.id===id); if(!u) return;
-    if(btn.dataset.act === 'qr') openQR(u);
-    else if(btn.dataset.act === 'edit') openEdit(u);
-    else if(btn.dataset.act === 'toggle') await toggleUser(u);
-    else if(btn.dataset.act === 'copy'){ await copy(u.link); flash(btn); }
-    else if(btn.dataset.act === 'del'){ if(confirm(`Удалить ключ «${u.name}»? Устройство потеряет доступ.`)) await deleteUser(id); }
+  let editing=null;
+  function openAdd(){editing=null;$('#addTitle').textContent='НОВЫЙ КЛЮЧ';$('#fSave').textContent='СОЗДАТЬ КЛЮЧ';$('#fName').value='';$('#fDev').value='';openOv('addOv');setTimeout(()=>$('#fName').focus(),40);}
+  function openEdit(u){editing=u;$('#addTitle').textContent='ИЗМЕНИТЬ КЛЮЧ';$('#fSave').textContent='СОХРАНИТЬ';$('#fName').value=u.name||'';$('#fDev').value=(u.device&&u.device!=='—')?u.device:'';openOv('addOv');}
+  $('#fSave').addEventListener('click',async()=>{
+    const n=$('#fName').value.trim()||'Без имени', d=$('#fDev').value.trim();
+    closeOv('addOv');
+    if(editing){const id=editing.id;editing=null;if(state.demo){const u=state.users.find(x=>x.id===id);if(u){u.name=n;u.device=d||'—';}renderUsers();}else{await API.update(id,{name:n,device:d});await refreshUsers();}return;}
+    if(state.demo){const u={id:'n'+Date.now(),name:n,device:d||'—',enabled:true,online:false,bytes_up:0,bytes_down:0,last_seen:null,link:'vless://'+crypto.randomUUID()+'@demo:443?security=reality#'+encodeURIComponent(n)};state.users.push(u);renderUsers();openQR(u);return;}
+    const u=await API.add(n,d); if(u){await refreshUsers();openQR(u);}
   });
 
-  async function deleteUser(id){
-    if(state.demo){ renderUsers(state.users.filter(u=>u.id!==id)); return; }
-    await API.del(id); refreshUsers();
-  }
-  async function refreshUsers(){ if(!state.demo) renderUsers(await API.users()); }
-
-  /* ---------- QR modal ---------- */
+  /* ---------- qr ---------- */
   function openQR(u){
-    state.curLink = u.link; state.curId = u.id;
-    $('#qrName').innerHTML = `${escapeHtml(u.name)}<span>${escapeHtml(u.device||'ключ')} · создан</span>`;
-    $('#qrLink').textContent = u.link;
-    const img = $('#qrImg'), cvs = $('#qrCanvas');
-    if(state.demo){ img.classList.add('hidden'); cvs.classList.remove('hidden'); drawPseudoQR(); }
-    else { cvs.classList.add('hidden'); img.classList.remove('hidden'); img.src = '/api/users/'+encodeURIComponent(u.id)+'/qr?t='+Date.now(); }
-    open('qrOverlay');
+    state.curLink=u.link||''; state.curId=u.id;
+    $('#qrTitle').textContent=(u.name||'КЛЮЧ').toUpperCase();
+    $('#qrLink').textContent=u.link||'—';
+    const img=$('#qrImg'),cv=$('#qrC');
+    if(state.demo){img.classList.add('hidden');cv.classList.remove('hidden');drawQR();}
+    else{cv.classList.add('hidden');img.classList.remove('hidden');img.src='/api/users/'+encodeURIComponent(u.id)+'/qr?t='+Date.now();}
+    openOv('qrOv');
   }
-  $('#copyBtn').addEventListener('click', async e => { await copy(state.curLink); e.target.textContent='Скопировано'; setTimeout(()=>e.target.textContent='Копировать',1400); });
-  $('#openAppBtn').addEventListener('click', () => { if(state.curLink) location.href = state.curLink; });
-  $('#dlBtn').addEventListener('click', () => {
-    const a = document.createElement('a');
-    if(state.demo){ a.href = $('#qrCanvas').toDataURL('image/png'); } else { a.href = '/api/users/'+encodeURIComponent(state.curId)+'/qr'; }
-    a.download = 'beacon-key.png'; a.click();
-  });
+  $('#qrCopy').addEventListener('click',async e=>{try{await navigator.clipboard.writeText(state.curLink);}catch(_){}e.target.textContent='СКОПИРОВАНО';setTimeout(()=>e.target.textContent='КОПИЯ',1300);});
+  function drawQR(){
+    const c=$('#qrC'),x=c.getContext('2d'),N=29,cell=c.width/N;let s=(Date.now()>>4)&0x7fffffff;
+    const rnd=()=>(s=(s*1103515245+12345)&0x7fffffff)/0x7fffffff;
+    x.fillStyle='#fff';x.fillRect(0,0,c.width,c.height);x.fillStyle='#000';
+    for(let y=0;y<N;y++)for(let xx=0;xx<N;xx++)if(rnd()>.5)x.fillRect(xx*cell,y*cell,cell,cell);
+    const f=(ox,oy)=>{x.fillStyle='#fff';x.fillRect(ox*cell,oy*cell,7*cell,7*cell);x.fillStyle='#000';x.fillRect(ox*cell,oy*cell,7*cell,cell);x.fillRect(ox*cell,(oy+6)*cell,7*cell,cell);x.fillRect(ox*cell,oy*cell,cell,7*cell);x.fillRect((ox+6)*cell,oy*cell,cell,7*cell);x.fillRect((ox+2)*cell,(oy+2)*cell,3*cell,3*cell);};
+    f(0,0);f(N-7,0);f(0,N-7);
+  }
 
-  /* ---------- add user ---------- */
-  $('#addBtn').addEventListener('click', () => {
-    state.editingId = null;
-    $('#addTitle').textContent = 'Новый ключ';
-    $('#createBtn').textContent = 'Создать ключ';
-    $('#uName').value=''; $('#uDevice').value='';
-    open('addOverlay'); setTimeout(()=>$('#uName').focus(),50);
+  /* ---------- password ---------- */
+  $('#pwSave').addEventListener('click',async()=>{
+    const p=$('#npw').value;
+    if(p.length<6){$('#pwErr').textContent='Минимум 6 символов';return;}
+    if(state.demo){closeOv('pwOv');alert('Демо: пароль не меняется.');return;}
+    const r=await API.password(p);
+    if(r.ok){closeOv('pwOv');alert('Пароль изменён.');}else{$('#pwErr').textContent='Не удалось сохранить';}
   });
-  function openEdit(u){
-    state.editingId = u.id;
-    $('#addTitle').textContent = 'Изменить ключ';
-    $('#createBtn').textContent = 'Сохранить';
-    $('#uName').value = u.name || ''; $('#uDevice').value = u.device || '';
-    open('addOverlay'); setTimeout(()=>$('#uName').focus(),50);
-  }
-  async function toggleUser(u){
-    const next = (u.enabled === false); // если сейчас выключен → включаем
-    if(state.demo){ u.enabled = next; renderUsers(state.users); return; }
-    await API.update(u.id, {enabled: next}); refreshUsers();
-  }
-  $('#createBtn').addEventListener('click', saveUser);
-  async function saveUser(){
-    const name = $('#uName').value.trim() || 'Без имени';
-    const device = $('#uDevice').value.trim();
-    close('addOverlay');
-    if(state.editingId){
-      const id = state.editingId; state.editingId = null;
-      if(state.demo){ const u = state.users.find(x=>x.id===id); if(u){ u.name=name; u.device=device; } renderUsers(state.users); return; }
-      await API.update(id, {name, device}); await refreshUsers(); return;
-    }
-    if(state.demo){
-      const u = { id:'demo-'+Date.now(), name, device, enabled:true, online:false, bytes_up:0, bytes_down:0, last_seen:null,
-        link:'vless://'+crypto.randomUUID()+'@demo-host:443?security=reality&sni=www.microsoft.com&fp=chrome#'+encodeURIComponent(name) };
-      state.users.push(u); renderUsers(state.users); openQR(u); return;
-    }
-    const u = await API.add(name, device);
-    if(u){ await refreshUsers(); openQR(u); }
-  }
 
   /* ---------- modals ---------- */
-  function open(id){ $('#'+id).classList.add('open'); }
-  function close(id){ $('#'+id).classList.remove('open'); }
-  document.querySelectorAll('[data-close]').forEach(b => b.addEventListener('click', () => close(b.dataset.close)));
-  document.querySelectorAll('.overlay').forEach(o => o.addEventListener('click', e => { if(e.target===o) o.classList.remove('open'); }));
-  document.addEventListener('keydown', e => { if(e.key==='Escape') document.querySelectorAll('.overlay.open').forEach(o=>{ if(o.id!=='login') o.classList.remove('open'); }); });
+  function openOv(id){$('#'+id).classList.add('open');}
+  function closeOv(id){$('#'+id).classList.remove('open');}
+  $$('[data-close]').forEach(b=>b.addEventListener('click',()=>closeOv(b.dataset.close)));
+  $$('.ov').forEach(o=>o.addEventListener('click',e=>{if(e.target===o&&o.id!=='loginOv')o.classList.remove('open');}));
+  document.addEventListener('keydown',e=>{if(e.key==='Escape')$$('.ov.open').forEach(o=>{if(o.id!=='loginOv')o.classList.remove('open');});});
 
-  async function copy(t){ try{ await navigator.clipboard.writeText(t); }catch(_){} }
-  function flash(btn){ btn.style.color='var(--accent)'; setTimeout(()=>btn.style.color='',700); }
-
-  /* ---------- chart ---------- */
-  const cvs = $('#traffic'), ctx = cvs.getContext('2d');
-  function draw(){
-    const dpr = Math.min(devicePixelRatio||1,2), w=cvs.clientWidth, h=cvs.clientHeight;
-    cvs.width=w*dpr; cvs.height=h*dpr; ctx.setTransform(dpr,0,0,dpr,0,0);
-    ctx.clearRect(0,0,w,h);
-    const pad=6, top=8, bot=h-6, peak=Math.max(10,...dn,...up)*1.15;
-    ctx.strokeStyle=css('--line'); ctx.lineWidth=1;
-    for(let g=0;g<=3;g++){ const y=top+(bot-top)*g/3; ctx.globalAlpha=.5; ctx.beginPath(); ctx.moveTo(pad,y); ctx.lineTo(w-pad,y); ctx.stroke(); }
-    ctx.globalAlpha=1;
-    const px=i=>pad+(w-2*pad)*i/(MAX-1), py=v=>top+(bot-top)*(1-v/peak);
-    const series=(arr,color)=>{
-      ctx.beginPath(); ctx.moveTo(px(0),py(arr[0])); for(let i=1;i<arr.length;i++) ctx.lineTo(px(i),py(arr[i]));
-      ctx.lineTo(px(arr.length-1),bot); ctx.lineTo(px(0),bot); ctx.closePath();
-      const g=ctx.createLinearGradient(0,top,0,bot); g.addColorStop(0,color+'44'); g.addColorStop(1,color+'00'); ctx.fillStyle=g; ctx.fill();
-      ctx.beginPath(); ctx.moveTo(px(0),py(arr[0])); for(let i=1;i<arr.length;i++) ctx.lineTo(px(i),py(arr[i])); ctx.strokeStyle=color; ctx.lineWidth=1.8; ctx.stroke();
-      const lx=px(arr.length-1), ly=py(arr[arr.length-1]); ctx.beginPath(); ctx.arc(lx,ly,2.8,0,7); ctx.fillStyle=color; ctx.fill();
-    };
-    series(up, css('--warn')); series(dn, css('--accent'));
+  /* ---------- charts ---------- */
+  function drawBW(){
+    const c=$('#bwC'); if(!c)return; const ctx=c.getContext('2d');
+    const dpr=Math.min(devicePixelRatio||1,2),w=c.clientWidth,h=150;
+    c.width=w*dpr;c.height=h*dpr;ctx.setTransform(dpr,0,0,dpr,0,0);ctx.clearRect(0,0,w,h);
+    const pad=4,top=8,bot=h-6,peak=Math.max(10,...dnArr,...upArr)*1.15;
+    ctx.strokeStyle='#161616';ctx.lineWidth=1;
+    for(let g=0;g<=3;g++){const y=top+(bot-top)*g/3;ctx.beginPath();ctx.moveTo(pad,y);ctx.lineTo(w-pad,y);ctx.stroke();}
+    const px=i=>pad+(w-2*pad)*i/(MAX-1),py=v=>top+(bot-top)*(1-v/peak);
+    ctx.beginPath();ctx.moveTo(px(0),py(dnArr[0]));for(let i=1;i<MAX;i++)ctx.lineTo(px(i),py(dnArr[i]));ctx.lineTo(px(MAX-1),bot);ctx.lineTo(px(0),bot);ctx.closePath();
+    const g=ctx.createLinearGradient(0,top,0,bot);g.addColorStop(0,'rgba(255,255,255,.14)');g.addColorStop(1,'rgba(255,255,255,0)');ctx.fillStyle=g;ctx.fill();
+    const line=(arr,dash)=>{ctx.beginPath();ctx.setLineDash(dash?[4,4]:[]);ctx.moveTo(px(0),py(arr[0]));for(let i=1;i<arr.length;i++)ctx.lineTo(px(i),py(arr[i]));ctx.strokeStyle='#fff';ctx.lineWidth=dash?1.2:1.7;ctx.stroke();ctx.setLineDash([]);};
+    line(upArr,true);line(dnArr,false);
   }
-  window.addEventListener('resize', draw);
-
-  function drawPseudoQR(){
-    const c=$('#qrCanvas'), x=c.getContext('2d'), N=29, cell=c.width/N; let seed=(Date.now()>>>4)&0x7fffffff;
-    const rnd=()=>(seed=(seed*1103515245+12345)&0x7fffffff)/0x7fffffff;
-    x.fillStyle='#fff'; x.fillRect(0,0,c.width,c.height); x.fillStyle='#0b0f14';
-    for(let y=0;y<N;y++) for(let xx=0;xx<N;xx++){ if(rnd()>0.52) x.fillRect(xx*cell,y*cell,cell,cell); }
-    const f=(ox,oy)=>{ x.fillStyle='#fff'; x.fillRect(ox*cell,oy*cell,7*cell,7*cell); x.fillStyle='#0b0f14'; x.fillRect(ox*cell,oy*cell,7*cell,cell); x.fillRect(ox*cell,(oy+6)*cell,7*cell,cell); x.fillRect(ox*cell,oy*cell,cell,7*cell); x.fillRect((ox+6)*cell,oy*cell,cell,7*cell); x.fillRect((ox+2)*cell,(oy+2)*cell,3*cell,3*cell); };
-    f(0,0); f(N-7,0); f(0,N-7);
+  function bars(sel,data,labels){
+    const c=$(sel); if(!c)return; const ctx=c.getContext('2d');
+    const dpr=Math.min(devicePixelRatio||1,2),w=c.clientWidth,h=150;
+    c.width=w*dpr;c.height=h*dpr;ctx.setTransform(dpr,0,0,dpr,0,0);ctx.clearRect(0,0,w,h);
+    const pad=6,bot=h-22,top=10,mx=Math.max(1,...data)*1.2,gap=(w-2*pad)/data.length,bw=Math.min(48,gap*0.6);
+    data.forEach((d,i)=>{const bh=(bot-top)*d/mx,x=pad+i*gap+(gap-bw)/2,y=bot-bh;ctx.globalAlpha=.85;ctx.fillStyle='#fff';ctx.fillRect(x,y,bw,Math.max(1,bh));ctx.globalAlpha=1;});
+    ctx.strokeStyle='#161616';ctx.beginPath();ctx.moveTo(pad,bot);ctx.lineTo(w-pad,bot);ctx.stroke();
+    ctx.fillStyle='#565656';ctx.font='10px ui-monospace,monospace';
+    (labels||[]).forEach((l,i)=>{const t=(l||'').slice(0,6);ctx.fillText(t,pad+i*gap+(gap-bw)/2,h-6);});
   }
 
-  /* ---------- speedtest (визуальный прогон) ---------- */
-  $('#stBtn').addEventListener('click', e => {
-    const b=e.target; b.textContent='Тестирую…'; b.disabled=true; let t=0;
-    const iv=setInterval(()=>{ $('#stDn').innerHTML=(200+Math.round(Math.random()*180))+'<small> Mbps</small>'; $('#stUp').innerHTML=(60+Math.round(Math.random()*70))+'<small> Mbps</small>'; $('#stPing').innerHTML=(6+Math.round(Math.random()*8))+'<small> ms</small>';
-      if(++t>6){ clearInterval(iv); b.textContent='Запустить тест'; b.disabled=false; } },220);
-  });
+  /* ---------- logs ---------- */
+  function cursor(){const c=document.createElement('div');c.className='ln';c.innerHTML='<span class="cursor"></span>';return c;}
+  function appendLog(box,text,cur){const ln=document.createElement('div');ln.className='ln';ln.textContent=text;box.insertBefore(ln,cur);box.scrollTop=box.scrollHeight;if(box.children.length>250)box.removeChild(box.firstChild);}
+  function startLogs(){
+    const box=$('#logbox'); if(!box)return; box.innerHTML=''; const cur=cursor(); box.appendChild(cur);
+    if(state.demo){
+      const samples=['xray  accepted tcp · reality ok · sni=www.microsoft.com','beacon  stats poll · online 3/5 · 61.2 GB','beacon  user online · +842 KB','xray  connection closed · idle timeout','beacon  GET /api/metrics 200 · 0.4ms'];
+      for(let i=0;i<12;i++)appendLog(box,new Date().toTimeString().slice(0,8)+'  '+samples[i%samples.length],cur);
+      if(!reduce)state.logTimer=setInterval(()=>{if(current!=='logs'){clearInterval(state.logTimer);return;}appendLog(box,new Date().toTimeString().slice(0,8)+'  '+samples[Math.random()*samples.length|0],cur);},1000);
+    }else{
+      try{state.logsES=new EventSource('/api/logs');state.logsES.onmessage=e=>appendLog(box,e.data,cur);state.logsES.onerror=()=>{};}catch(_){appendLog(box,'журнал недоступен',cur);}
+    }
+  }
+
+  /* ---------- speed (визуальный) ---------- */
+  function runSpeed(){
+    const b=$('#s-run');b.textContent='ТЕСТ…';b.disabled=true;let t=0;
+    const iv=setInterval(()=>{
+      if($('#s-dn'))$('#s-dn').innerHTML=(200+(Math.random()*180|0))+'<small>Mbps</small>';
+      if($('#s-up'))$('#s-up').innerHTML=(60+(Math.random()*70|0))+'<small>Mbps</small>';
+      if($('#s-pg'))$('#s-pg').innerHTML=(6+(Math.random()*8|0))+'<small>ms</small>';
+      if(++t>6){clearInterval(iv);b.textContent='ЗАПУСТИТЬ ТЕСТ';b.disabled=false;}
+    },200);
+  }
+
+  /* ---------- live metrics ---------- */
+  function applyMetrics(m){
+    M.cpu=m.cpu||0; M.ram=(m.mem_used||0)/GB; M.ramT=(m.mem_total||0)/GB;
+    M.dn=(m.net_rx_bps||0)*8/1e6; M.up=(m.net_tx_bps||0)*8/1e6;
+    M.uptSec=m.uptime_sec||0; M.load1=m.load1||0;
+    dnArr.push(M.dn);dnArr.shift();upArr.push(M.up);upArr.shift();
+    refreshLive();
+  }
+  function set(id,v){const e=$(id);if(e)e.innerHTML=v;}
+  function refreshLive(){
+    if(current==='connection'||current==='servers'){
+      set('#r-cpu',Math.round(M.cpu)+(current==='connection'?'<small>%</small>':''));
+      set('#r-upt',fmtUpt(M.uptSec));
+    }
+    if(current==='connection'){
+      set('#r-ram',(M.ramT?M.ram.toFixed(1):'0')+'<small>/'+(M.ramT||0).toFixed(1)+' ГБ</small>');
+      set('#r-dn',fmtMbps(M.dn)+'<small>Mbps</small>');set('#r-up',fmtMbps(M.up)+'<small>Mbps</small>');
+      set('#r-cl',onlineN()+' / '+state.users.length);
+    }
+    if(current==='bandwidth'){drawBW();set('#bw-dn',fmtMbps(M.dn));set('#bw-up',fmtMbps(M.up));}
+  }
+  function connectMetrics(){try{state.metricsES=new EventSource('/api/stream');state.metricsES.onmessage=e=>{try{applyMetrics(JSON.parse(e.data))}catch(_){}};}catch(_){}}
 
   /* ---------- boot ---------- */
+  function setTop(){const h=(INFO.host||location.hostname||'').toUpperCase();$('#topHost').textContent=h?('В СЕТИ · '+h):'В СЕТИ';}
   async function startApp(){
-    $('#login').classList.remove('open'); $('#app').classList.remove('hidden');
-    $('#hostName').textContent = location.hostname || 'localhost';
-    $('#regName').textContent = 'сервер';
-    if(state.demo){ startDemo(); return; }
-    renderUsers(await API.users());
-    setInterval(refreshUsers, 15000);
-    const es = new EventSource('/api/stream');
-    es.onmessage = ev => { try{ applyMetrics(JSON.parse(ev.data)); }catch(_){} };
-    es.onerror = () => {};
+    $('#loginOv').classList.remove('open');
+    if(state.demo){INFO={version:'demo',host:'demo-host',vpn_port:443,listen:':8443',sni:'www.microsoft.com',dest:'www.microsoft.com:443',fingerprint:'chrome',public_key:'12R6C36yvy7w_jO6dZHnRx',short_ids:['268abbed4aed34fc'],tls:'self-signed'};state.users=demoUsers();startDemo();setTop();return;}
+    INFO=await API.info().catch(()=>({}));
+    state.users=await API.users().catch(()=>[]);
+    setTop(); connectMetrics();
+    setInterval(async()=>{if(!state.demo){state.users=await API.users().catch(()=>state.users);if(current==='users')renderUsers();refreshLive();}},15000);
   }
-
+  function demoUsers(){return[
+    {id:'a1',name:'Артём',device:'iPhone 15',enabled:true,online:true,bytes_up:1.1*GB,bytes_down:3.1*GB,last_seen:new Date(Date.now()-12000).toISOString(),link:'vless://a1@demo:443#Артём'},
+    {id:'a2',name:'MacBook Air',device:'macOS',enabled:true,online:true,bytes_up:6*GB,bytes_down:12.6*GB,last_seen:new Date(Date.now()-60000).toISOString(),link:'vless://a2@demo:443#MacBook'},
+    {id:'a3',name:'Даша',device:'Android',enabled:false,online:false,bytes_up:.2*GB,bytes_down:.62*GB,last_seen:new Date(Date.now()-10800000).toISOString(),link:'vless://a3@demo:443#Даша'},
+    {id:'a4',name:'Роутер',device:'OpenWrt',enabled:true,online:true,bytes_up:9*GB,bytes_down:52*GB,last_seen:new Date().toISOString(),link:'vless://a4@demo:443#Router'},
+  ];}
   function startDemo(){
-    renderUsers([
-      {id:'d1',name:'Артём',device:'iPhone 15',enabled:true,online:true,bytes_up:1.1e9,bytes_down:3.1e9,last_seen:new Date(Date.now()-12000).toISOString(),link:'vless://demo@host:443#Артём'},
-      {id:'d2',name:'MacBook Air',device:'macOS',enabled:true,online:true,bytes_up:6e9,bytes_down:12.6e9,last_seen:new Date(Date.now()-60000).toISOString(),link:'vless://demo@host:443#MacBook'},
-      {id:'d3',name:'Даша',device:'Android',enabled:false,online:false,bytes_up:2e8,bytes_down:6.2e8,last_seen:new Date(Date.now()-3*3600e3).toISOString(),link:'vless://demo@host:443#Даша'},
-    ]);
-    let dc=48, uc=12, upt=12*86400+4*3600;
-    if(reduce){ applyMetrics(demoSample(dc,uc,upt)); return; }
-    setInterval(()=>{ dc=Math.max(6,Math.min(90,dc+(Math.random()-.5)*18)); uc=Math.max(3,Math.min(40,uc+(Math.random()-.5)*8)); upt+=1.5; applyMetrics(demoSample(dc,uc,upt)); },1500);
+    let dc=48,uc=12,upt=12*86400+4*3600;
+    const tick=()=>{dc=Math.max(6,Math.min(90,dc+(Math.random()-.5)*18));uc=Math.max(3,Math.min(40,uc+(Math.random()-.5)*8));upt+=1.5;applyMetrics({cpu:8+(Math.random()*22|0),mem_used:.9*GB,mem_total:2*GB,net_rx_bps:dc*1e6/8,net_tx_bps:uc*1e6/8,load1:0.21,uptime_sec:Math.round(upt)});};
+    tick(); if(!reduce)state.demoTimer=setInterval(tick,1500);
   }
-  function demoSample(dc,uc,upt){ return { cpu:8+Math.random()*22, mem_used:0.9*GB, mem_total:2*GB, net_rx_bps:dc*1e6/8, net_tx_bps:uc*1e6/8, load1:0.21,load5:0.18,load15:0.15, uptime_sec:Math.round(upt) }; }
 
-  /* login flow */
-  $('#loginForm').addEventListener('submit', async e => {
-    e.preventDefault();
-    const ok = await API.login($('#pw').value);
-    if(ok){ startApp(); } else { $('#loginErr').textContent='Неверный пароль'; $('#pw').select(); }
-  });
-  $('#logoutBtn').addEventListener('click', async () => { if(!state.demo) await API.logout(); location.reload(); });
+  async function doLogout(){ if(!state.demo)await API.logout(); location.reload(); }
+  $('#loginForm').addEventListener('submit',async e=>{e.preventDefault();const ok=await API.login($('#pw').value);if(ok){startApp();}else{$('#loginErr').textContent='Неверный пароль';$('#pw').select();}});
 
-  (async () => {
-    try {
-      const authed = await API.session();
-      if(authed) startApp(); else $('#login').classList.add('open');
-    } catch(_) {
-      // API недоступен (открыт как статический файл) → демо-режим
-      state.demo = true; startApp();
-    }
+  window.addEventListener('resize',()=>{if(current==='bandwidth')drawBW();});
+
+  (async()=>{
+    try{ const a=await API.session(); if(a)startApp(); else $('#loginOv').classList.add('open'); }
+    catch(_){ state.demo=true; startApp(); }
   })();
 })();
 </script>

@@ -105,7 +105,7 @@ func serve() {
 		log.Printf("предупреждение: запись конфига Xray: %v", err)
 	}
 
-	srv := server.New(cfg, paths, st, xr)
+	srv := server.New(cfg, paths, st, xr, version)
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 

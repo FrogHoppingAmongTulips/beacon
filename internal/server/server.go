@@ -25,13 +25,14 @@ type Server struct {
 	coll     *metrics.Collector
 	xray     *xray.Manager
 	sessions *sessionStore
+	version  string
 
 	mu     sync.RWMutex
 	latest metrics.Sample
 }
 
 // New создаёт сервер.
-func New(cfg *config.Config, paths config.Paths, st *store.Store, xr *xray.Manager) *Server {
+func New(cfg *config.Config, paths config.Paths, st *store.Store, xr *xray.Manager, version string) *Server {
 	return &Server{
 		cfg:      cfg,
 		paths:    paths,
@@ -39,6 +40,7 @@ func New(cfg *config.Config, paths config.Paths, st *store.Store, xr *xray.Manag
 		xray:     xr,
 		coll:     metrics.New(),
 		sessions: newSessions(),
+		version:  version,
 	}
 }
 
@@ -62,6 +64,11 @@ func (s *Server) routes() http.Handler {
 	mux.HandleFunc("DELETE /api/users/{id}", s.auth(s.handleDeleteUser))
 	mux.HandleFunc("GET /api/users/{id}/link", s.auth(s.handleUserLink))
 	mux.HandleFunc("GET /api/users/{id}/qr", s.auth(s.handleUserQR))
+
+	// сервер, логи, смена пароля
+	mux.HandleFunc("GET /api/info", s.auth(s.handleInfo))
+	mux.HandleFunc("GET /api/logs", s.auth(s.handleLogs))
+	mux.HandleFunc("POST /api/password", s.auth(s.handlePassword))
 
 	return mux
 }

@@ -98,22 +98,33 @@ main() {
   require_root
   ensure_deps
   install_xray
-  install_beacon
+  install_beacon           # всегда качает свежий бинарник — это же путь обновления
   mkdir -p "$BEACON_DIR"
 
-  local ip; ip="$(public_ip)"
-  log "первичная настройка (host=$ip)…"
-  # setup генерит Reality-ключи, пароль, первого пользователя и печатает сводку с QR
-  "$BIN" setup --host "$ip" --listen ":${PANEL_PORT}" --port "${VPN_PORT}" --sni "${SNI}" --force
+  local ip fresh=0; ip="$(public_ip)"
+  if [ -f "$BEACON_DIR/config.json" ]; then
+    log "beacon уже настроен — обновляю бинарник, конфиг и ключи не трогаю"
+  else
+    fresh=1
+    log "первичная настройка (host=$ip)…"
+    # setup генерит Reality-ключи, пароль, первого пользователя и печатает сводку с QR
+    "$BIN" setup --host "$ip" --listen ":${PANEL_PORT}" --port "${VPN_PORT}" --sni "${SNI}"
+  fi
 
   install_service
-  systemctl enable --now xray   >/dev/null 2>&1 || log "предупреждение: не удалось запустить сервис xray"
-  systemctl enable --now beacon >/dev/null 2>&1 || die "не удалось запустить сервис beacon"
+  systemctl enable xray  >/dev/null 2>&1 || true
+  systemctl restart xray >/dev/null 2>&1 || log "предупреждение: сервис xray не запустился"
+  systemctl enable beacon >/dev/null 2>&1 || true
+  systemctl restart beacon || die "не удалось запустить сервис beacon"
   open_firewall
 
   echo
-  log "готово. Панель: https://${ip}:${PANEL_PORT}"
-  log "пароль и первый QR — выше в сводке setup. Логи: journalctl -u beacon -f"
+  if [ "$fresh" = "1" ]; then
+    log "готово. Панель: https://${ip}:${PANEL_PORT} — пароль и первый QR в сводке выше."
+  else
+    log "обновлено. Панель: https://${ip}:${PANEL_PORT} (пароль и ключи прежние)."
+  fi
+  log "версия: $("$BIN" version 2>/dev/null). Логи: journalctl -u beacon -f"
 }
 
 main "$@"
