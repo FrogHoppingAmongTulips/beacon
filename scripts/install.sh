@@ -29,10 +29,16 @@ detect_arch() {
 }
 
 ensure_deps() {
-  command -v curl >/dev/null 2>&1 && return
-  log "ставлю curl…"
+  if ! command -v apt-get >/dev/null 2>&1; then
+    command -v curl >/dev/null 2>&1 || die "нужен curl — установи его вручную и повтори"
+    command -v unzip >/dev/null 2>&1 || die "нужен unzip (его требует установщик Xray) — установи вручную"
+    return
+  fi
   export DEBIAN_FRONTEND=noninteractive
-  apt-get update -y && apt-get install -y curl ca-certificates
+  # curl, unzip и ca-certificates нужны установщику Xray; ставим всегда, а не только когда нет curl
+  log "обновляю списки пакетов и ставлю зависимости (curl, unzip, ca-certificates)…"
+  apt-get update -y || die "apt-get update не удался — проверь сеть/репозитории сервера"
+  apt-get install -y curl unzip ca-certificates || die "не удалось поставить curl/unzip/ca-certificates"
 }
 
 install_xray() {
