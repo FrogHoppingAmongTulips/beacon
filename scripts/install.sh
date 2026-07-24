@@ -13,7 +13,6 @@ BEACON_REPO="${BEACON_REPO:-FrogHoppingAmongTulips/beacon}"
 BASE_URL="${BEACON_URL:-https://github.com/${BEACON_REPO}/releases/latest/download}"
 PANEL_PORT="${PANEL_PORT:-8443}"
 VPN_PORT="${VPN_PORT:-443}"
-AWG_PORT="${AWG_PORT:-51820}"
 SNI="${SNI:-www.microsoft.com}"
 
 log()  { printf '\033[36m[beacon]\033[0m %s\n' "$*"; }
@@ -51,31 +50,6 @@ install_xray() {
   bash -c "$(curl -fsSL https://github.com/XTLS/Xray-install/raw/main/install-release.sh)" @ install
 }
 
-# AmneziaWG ставим сразу (не только при выборе протокола), чтобы переключение в панели было мгновенным.
-# Не критична для базовой установки — при неудаче просто предупреждаем и продолжаем (VLESS+Reality всё равно заработает).
-install_amneziawg() {
-  if command -v awg-quick >/dev/null 2>&1; then
-    log "AmneziaWG уже установлена"
-    return
-  fi
-  if ! command -v apt-get >/dev/null 2>&1; then
-    log "предупреждение: автоустановка AmneziaWG поддержана только на apt-системах — пропускаю, VLESS+Reality не пострадает"
-    return
-  fi
-  log "ставлю AmneziaWG…"
-  apt-get install -y software-properties-common >/dev/null 2>&1 || true
-  add-apt-repository -y ppa:amnezia/ppa >/dev/null 2>&1
-  if apt-get update -y >/dev/null 2>&1 && apt-get install -y amneziawg amneziawg-tools >/dev/null 2>&1; then
-    log "AmneziaWG установлена"
-  else
-    # PPA может не поддерживать релиз системы (напр. слишком новый Ubuntu) — тогда битый файл
-    # репозитория ломает все последующие apt-get update, включая обновление самого beacon. Убираем его.
-    rm -f /etc/apt/sources.list.d/amnezia-ubuntu-ppa-*.list /etc/apt/sources.list.d/amnezia-ubuntu-ppa-*.sources
-    apt-get update -y >/dev/null 2>&1 || true
-    log "предупреждение: не удалось поставить AmneziaWG (PPA не поддерживает эту версию системы) — переключение протокола в панели будет недоступно, VLESS+Reality не пострадал"
-  fi
-}
-
 install_beacon() {
   local arch tmp; arch="$(detect_arch)"; tmp="${BIN}.new"
   log "скачиваю beacon ($arch)…"
@@ -99,8 +73,7 @@ open_firewall() {
   if command -v ufw >/dev/null 2>&1 && ufw status | grep -q active; then
     ufw allow "${VPN_PORT}"/tcp   >/dev/null 2>&1 || true
     ufw allow "${PANEL_PORT}"/tcp >/dev/null 2>&1 || true
-    ufw allow "${AWG_PORT}"/udp   >/dev/null 2>&1 || true
-    log "порты ${VPN_PORT}/tcp, ${AWG_PORT}/udp и ${PANEL_PORT}/tcp открыты в ufw"
+    log "порты ${VPN_PORT}/tcp и ${PANEL_PORT}/tcp открыты в ufw"
   fi
 }
 
@@ -129,7 +102,10 @@ main() {
   require_root
   ensure_deps
   install_xray
-  install_amneziawg
+  # AmneziaWG временно отключена в установщике: PPA amnezia/ppa не поддерживает
+  # свежие релизы Ubuntu (напр. 26.04 "resolute" — 404), ломает apt. Панель
+  # умеет переключаться на amneziawg (beacon protocol amneziawg), но ставить
+  # awg-quick пока нужно вручную.
   install_beacon           # всегда качает свежий бинарник — это же путь обновления
   mkdir -p "$BEACON_DIR"
 
